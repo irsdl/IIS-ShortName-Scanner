@@ -25,7 +25,10 @@ To compile the Java file (javac needs to be in your path/it is in JDK Bin direct
 To run the compiled file (java needs to be in your path/it is in JDK/JRE Bin directory): /scanner_directory/java scanner
 
 
-More References:
+- More References:
+
 http://www.osvdb.org/83771
+
 http://www.exploit-db.com/exploits/19525/
+
 http://securitytracker.com/id?1027223
