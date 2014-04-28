@@ -3,7 +3,7 @@ iis-shortname-scanner
 
 Microsoft IIS contains a flaw that may lead to an unauthorized information disclosure. The issue is triggered during the parsing of a request that contains a tilde character (~). This may allow a remote attacker to gain access to file and folder name information.
 
-This exploit has been moved to github for better support from https://code.google.com/p/iis-shortname-scanner-poc/
+This scanner has been moved from https://code.google.com/p/iis-shortname-scanner-poc/ to github for better support.
 
 
 Research file: http://soroush.secproject.com/downloadable/microsoft_iis_tilde_character_vulnerability_feature.pdf
