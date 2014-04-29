@@ -15,11 +15,6 @@ It is possible to detect short names of files and directories which have an 8.3 
 
 It is not easy to enumerate the short names manually as it will take a long time. Therefore, I have created an open source proof of concept in Java which automates this process. I have used all of the different techniques that I have mentioned above in this code. I have tried to reduce the amount of the requests that it has to send to the server to find the valid files and folders. In order to check the PoC application, you can compare its result with the “Dir /x ~” command on the same directory.
 
-Research file: http://soroush.secproject.com/downloadable/microsoft_iis_tilde_character_vulnerability_feature.pdf
-
-Website Reference: http://soroush.secproject.com/blog/2012/06/microsoft-iis-tilde-character-vulnerabilityfeature-short-filefolder-name-disclosure/
-
-Video Link: http://www.youtube.com/watch?v=XOd90yCXOP4
 
 Installation
 ------------
@@ -66,10 +61,19 @@ Example 4 (bypasses IIS basic authentication):
 
 Note: Sometimes it does not work for the first time and you need to try again.
 
-### More References:
+References
+------------
+
+Research file: http://soroush.secproject.com/downloadable/microsoft_iis_tilde_character_vulnerability_feature.pdf
+
+Website Reference: http://soroush.secproject.com/blog/2012/06/microsoft-iis-tilde-character-vulnerabilityfeature-short-filefolder-name-disclosure/
+
+Video Link: http://www.youtube.com/watch?v=XOd90yCXOP4
 
 http://www.osvdb.org/83771
 
 http://www.exploit-db.com/exploits/19525/
 
 http://securitytracker.com/id?1027223
+
+
