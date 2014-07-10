@@ -7,9 +7,10 @@ public class scanner {
 	/* { Custom Config */
 
 	private final static boolean debugMode = false;
-	private final static String strVersion = "1.9.8 - 10July2014";
+	private final static String strVersion = "1.9.9 - 11July2014";
 	private final static String customUserAgent = "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/534.10 (KHTML, like Gecko) Chrome/8.0.552.215 Safari/534.10";
 	private final static String customCookie = "IIS_Shortname_Scanner_PoC=1;"; // Your cookie information. Can be a hidden value that will pass your WAF.
+	private final static String[][] additionalHeaders = {{"X-Forwarded-For","192.168.1.1"},{"X-Originating-IP","192.168.1.1"}}; // Additional headers such as Authorization header can be defined here
 	private final static String additionalQuery = "?aspxerrorpath=/"; // In order to see the errors better than a normal request
 	private final static String scanList = "0123456789abcdefghijklmnopqrstuvwxyz!#$%&'()-@^_`{}~"; //discard any of these to have more speed!
 	private static int maxConnectionTimeOut = 20000; // Miliseconds
@@ -17,6 +18,11 @@ public class scanner {
 	private static String proxyServerName = ""; // Proxy will be ignored if this is empty
 	private static Integer proxyServerPort = 0;
 	private static Long maxDelayAfterEachRequest = (long) 0; // Delay after each request in milliseconds
+	private String[] magicFinalPartList = {"\\a.asp","/a.asp","\\a.aspx","/a.aspx","/a.shtml","/a.asmx","/a.ashx","/a.config","/a.php","/a.jpg","/a.xxx",""};
+	private String questionMarkSymbol = "?"; // in Windows we can sometimes use > instead of ?
+	private String asteriskSymbol = "*"; // in Windows we can sometimes use < instead of * - only change this if you need to (it misses items)
+	private String magicFileName = "*~1*"; // "*" will be replaced with asteriskSymbol variable later
+	private String magicFileExtension = "*"; // "*" will be replaced with asteriskSymbol variable later
 	/* Custom Config }*/
 	/* Do not change the below lines if it's Greek to you!*/
 	public Set<String> finalResultsFiles = new TreeSet<String>();
@@ -30,14 +36,10 @@ public class scanner {
 	private static String destURL;
 	private static int showProgress;
 	private static int concurrentThreads;
-	private String magicFileName = "*~1*";
-	private String magicFileExtension = "*";
 	private String magicFinalPart;
 	private String validStatus = "";
 	private String invalidStatus = "";
 	private boolean boolIsQuestionMarkReliable = false;
-	private String questionMarkSymbol = "?"; // in Windows we can sometimes use > instead of ?
-	private String asteriskSymbol = "*"; // in Windows we can sometimes use < instead of * - only change this if you need to (it misses items)
 	private boolean boolIsExtensionReliable = false;
 	private int threadCounter = 0;
 	private ThreadPool threadPool = new ThreadPool(0);
@@ -121,7 +123,7 @@ public class scanner {
 					System.out.println("\rProxy Server:"+proxyServerName+":"+String.valueOf(proxyServerPort)+"\r\n");
 				else
 					System.out.println("\rNo proxy has been used.\r\n");
-				
+								
 				// Beginning...
 				Date start_date = new Date();
 				System.out.println("\rScanning...\r\n");
@@ -171,7 +173,9 @@ public class scanner {
 
 	private void doScan(String url) throws Exception {
 		destURL = url;
-		String[] magicFinalPartList = {"\\a.asp","/a.asp","\\a.aspx","/a.aspx","/a.shtml","/a.asmx","/a.ashx","/a.config","/a.php","/a.jpg","/a.xxx",""};
+		magicFileName = magicFileName.replace("*", asteriskSymbol);
+		magicFileExtension = magicFileExtension.replace("*", asteriskSymbol);
+		
 		boolean isReliableResult = false;
 		// Create the proxy string
 		if(!proxyServerName.equals("") && !proxyServerPort.equals("")){
@@ -223,7 +227,6 @@ public class scanner {
 				if  (s.length() - s.lastIndexOf(".") <= 3)
 					additionalData += " -- Actual extension = " + s.substring(s.lastIndexOf("."));
 				System.out.println("File: " + s + additionalData);
-				//System.out.println("File: " + s + "   " + s.substring(s.lastIndexOf(".")) + "   " + String.valueOf((s.length() - s.lastIndexOf("."))));
 			}
 		}
 		System.out.println();
@@ -747,8 +750,9 @@ public class scanner {
 					return true;
 				}
 			});
-
-			URL finalURL = new URL(destURL + URLEncoder.encode(strAddition, "UTF-8")+additionalQuery);
+			String urlEncodedStrAddition = URLEncoder.encode(strAddition, "UTF-8");
+			urlEncodedStrAddition = urlEncodedStrAddition.replace("*","%2A"); // Java does not encode asterisk character
+			URL finalURL = new URL(destURL + urlEncodedStrAddition + additionalQuery);
 
 			if(!proxyServerName.equals("") && !proxyServerPort.equals("")){
 				// Use the proxy server to sends the requests
@@ -766,7 +770,11 @@ public class scanner {
 			if (!customCookie.equals("")) {
 				conn.setRequestProperty("Cookie", customCookie);
 			}
-
+			
+			for(String[] newHeader:additionalHeaders){
+				conn.setRequestProperty(newHeader[0], newHeader[1]);
+			}
+			
 			int length = 0;
 			String responseHeaderStatus = "";
 
