@@ -7,7 +7,7 @@ public class scanner {
 	/* { Custom Config */
 
 	private final static boolean debugMode = false;
-	private final static String strVersion = "1.9.9 - 11July2014";
+	private final static String strVersion = "2.0.0 - 31July2014";
 	private final static String customUserAgent = "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/534.10 (KHTML, like Gecko) Chrome/8.0.552.215 Safari/534.10";
 	private final static String customCookie = "IIS_Shortname_Scanner_PoC=1;"; // Your cookie information. Can be a hidden value that will pass your WAF.
 	private final static String[][] additionalHeaders = {{"X-Forwarded-For","192.168.1.1"},{"X-Originating-IP","192.168.1.1"}}; // Additional headers such as Authorization header can be defined here
@@ -23,6 +23,7 @@ public class scanner {
 	private String asteriskSymbol = "*"; // in Windows we can sometimes use < instead of * - only change this if you need to (it misses items)
 	private String magicFileName = "*~1*"; // "*" will be replaced with asteriskSymbol variable later
 	private String magicFileExtension = "*"; // "*" will be replaced with asteriskSymbol variable later
+	private String requestMethod = "GET"; // GET, POST, HEAD, OPTIONS, PUT, DELETE, TRACE -- Sometimes OPTIONS is more effective than GET!
 	/* Custom Config }*/
 	/* Do not change the below lines if it's Greek to you!*/
 	public Set<String> finalResultsFiles = new TreeSet<String>();
@@ -152,12 +153,9 @@ public class scanner {
 		Arrays.fill(delim, '*');
 		System.out.println("");
 		System.out.println(String.valueOf(delim));
-		System.out.println("\r\n* IIS Shortname Scanner PoC - 1st release: Dec. 2010\r\n* Finder and Programmer: Soroush Dalili - @irsdl");
-		System.out.println("* Credit goes to: Soroush Dalili & Ali Abbasnejad");
-		System.out.println("* Paper link: http://soroush.secproject.com/downloadable/microsoft_iis_tilde_character_vulnerability_feature.pdf");
+		System.out.println("\r\n* IIS Shortname Scanner \r\n* by Soroush Dalili - @irsdl");
 		System.out.println("* Version: " + strVersion);
-		System.out.println("* Microsoft has already been informed. However, as it has already been rectified in latest versions of .Net & IIS which follow best practices, Microsoft does not have any plan to change the other versions.");
-		System.out.println("* WARNING: We are not responsible for any illegal or malicious usage of the PoC code or this paper. You are only allowed to run the scanner against the websites which you have permission to scan. We do not accept any responsibility for any damage/harm that this application causes to your computer or your network as it is only a proof of concept and may lead to unknown issues. It is your responsibility to use this code legally and you are not allowed to sell this code in any way.\r\n");
+		System.out.println("* WARNING: You are only allowed to run the scanner against the websites which you have given permission to scan. We do not accept any responsibility for any damage/harm that this application causes to your computer or your network as it is only a proof of concept and may lead to unknown issues. It is your responsibility to use this code legally and you are not allowed to sell this code in any way. The programmer is not responsible for any illegal or malicious use of this code. Be Ethical! \r\n");
 		System.out.println(String.valueOf(delim));
 		System.out.println("\r\nUSAGE:\r\n java scanner [ShowProgress] [ThreadNumbers] [URL]\r\n");
 		System.out.println("DETAILS:");
@@ -774,6 +772,9 @@ public class scanner {
 			for(String[] newHeader:additionalHeaders){
 				conn.setRequestProperty(newHeader[0], newHeader[1]);
 			}
+			
+			// Set the request method!
+			conn.setRequestMethod(requestMethod);
 			
 			int length = 0;
 			String responseHeaderStatus = "";
