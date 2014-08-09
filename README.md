@@ -1,6 +1,6 @@
 iis-shortname-scanner
 =====================
-latest version of scanners for IIS short filename (8.3) disclosure vulnerability.
+latest version of scanners for IIS short file name (8.3) disclosure vulnerability.
 
 Description
 -----------
@@ -30,36 +30,36 @@ Usage
 
 ### Command line options
 
-  java scanner [ShowProgress] [ThreadNumbers] [URL]
+USAGE 1 (To verify if the target is vulnerable):
+ java scanner [URL]
+
+
+USAGE 2 (To find 8.3 file names):
+ java scanner [ShowProgress] [ThreadNumbers] [URL]
 
 DETAILS:
-
  [ShowProgress]: 0= Show final results only - 1= Show final results step by step  - 2= Show Progress
- 
  [ThreadNumbers]: 0= No thread - Integer Number = Number of concurrent threads [be careful about IIS Denial of Service]
- 
  [URL]: A complete URL - starts with http/https protocol
 
 
-### Sample command line:
+- Example 0 (to see if the target is vulnerable):
+ java scanner http://example.com/folder/
 
-Example 1 (uses no thread - very slow - not recommended!):
+- Example 1 (uses no thread - very slow):
+ java scanner 2 0 http://example.com/folder/new%20folder/
 
-  java scanner 2 0 http://example.com/folder/new%20folder/
+- Example 2 (uses 20 threads - recommended):
+ java scanner 2 20 http://example.com/folder/new%20folder/
 
-Example 2 (uses 20 threads - recommended):
+- Example 3 (saves output in a text file):
+ java scanner 0 20 http://example.com/folder/new%20folder/ > c:\results.txt
 
-  java scanner 2 20 http://example.com/folder/new%20folder/
+- Example 4 (bypasses IIS basic authentication):
+ java scanner 2 20 http://example.com/folder/AuthNeeded:$I30:$Index_Allocation/
 
-Example 3 (saves output in a text file):
-
-  java scanner 0 20 http://example.com/folder/new%20folder/ > c:\results.txt
-
-Example 4 (bypasses IIS basic authentication):
-
-  java scanner 2 20 http://example.com/folder/AuthNeeded:$I30:$Index_Allocation/
-
-Note: Sometimes it does not work for the first time and you need to try again.
+Note 1: Edit config.xml file to change the scanner settings and add additional headers.
+Note 2: Sometimes it does not work for the first time and you need to try again.
 
 References
 ------------

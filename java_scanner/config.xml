@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+	<comment>IIS Short File/Folder Name (8.3) Scanner - Configuration File</comment>
+	
+	<entry key="debug">false</entry>
+	
+	<entry key="userAgent"><![CDATA[Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/534.10 (KHTML, like Gecko) Chrome/8.0.552.215 Safari/534.10]]></entry>
+	
+	<!-- Your cookie information. Can be a hidden value that will pass your WAF. -->
+	<entry key="cookies">IIS_Short_File_Scanner=1;</entry>
+	
+	<!-- Additional headers such as Authorization header can be defined here -->
+	<entry key="headersDelimiter">@@</entry>
+	<entry key="headers">X-Forwarded-For: 127.0.0.1@@X-Originating-IP: 127.0.0.1@@X-Cluster-Client-Ip: 127.0.0.1</entry>
+	
+	<!-- In order to see the errors better than a normal request you can use aspxerrorpath=/ -->
+	<entry key="URLSuffix"><![CDATA[?&aspxerrorpath=/]]></entry>
+	
+	<!-- discard any of these to have more speed! -->
+	<entry key="inScopeCharacters"><![CDATA[0123456789abcdefghijklmnopqrstuvwxyz!#$%&'()-@^_`{}~]]></entry>
+	
+	<!-- in Milliseconds -->
+	<entry key="maxConnectionTimeOut">20000</entry>
+	
+	<entry key="maxRetryTimes">10</entry>
+	
+	<!-- Proxy will be ignored if this is empty -->
+	<entry key="proxyServerName"></entry>
+	<entry key="proxyServerPort"></entry>
+	
+	<!-- Delay after each request in milliseconds -->
+	<entry key="maxDelayAfterEachRequest">0</entry>
+	
+	<entry key="magicFinalPartDelimiter">,</entry>
+	<entry key="magicFinalPartList"><![CDATA[\a.asp,/a.asp,\a.aspx,/a.aspx,/a.shtml,/a.asmx,/a.ashx,/a.config,/a.php,/a.jpg,,/a.xxx]]></entry>
+	
+	<!-- in Windows we can sometimes use > instead of ? -->
+	<entry key="questionMarkSymbol"><![CDATA[?]]></entry>
+	
+	<!-- in Windows we can sometimes use < instead of * - only change this if you need to (it misses items) -->
+	<entry key="asteriskSymbol"><![CDATA[*]]></entry>
+	
+	<!-- "*" will be replaced with asteriskSymbol variable later -->
+	<entry key="magicFileName"><![CDATA[*~1*]]></entry>
+	
+	<!-- "*" will be replaced with asteriskSymbol variable later -->
+	<entry key="magicFileExtension"><![CDATA[*]]></entry>
+	
+	<!-- This will be used to compare the different responses and accept them as equal if their length difference is equal or less than this -->
+	<!--  -1 can be used to ignore this rule completely -->
+	<!-- This may make the scan result unreliable so must be very small value or -1 -->
+	<entry key="acceptableDifferenceLengthBetweenResponses">10</entry>
+	
+	<entry key="requestMethodDelimiter">,</entry>
+	<entry key="requestMethod"><![CDATA[OPTIONS,GET,POST,HEAD,TRACE,TRACK]]></entry>
+
+</properties>

@@ -1,3 +1,3 @@
-REM "C:\Program Files\Java\jdk1.7.0_65\bin\javac.exe" scanner.java
+REM You need JDK: http://www.oracle.com/technetwork/java/javase/downloads/index.html
 javac.exe scanner.java
 java scanner

