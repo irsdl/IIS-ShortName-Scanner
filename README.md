@@ -22,13 +22,15 @@ It is not easy to find the original file or folder names based on the short name
 
 Installation
 --------------
-You only need to download the following files if you do not want to build this yourself:
+It has been compiled by using JDK 7. You only need to download the following files if you do not want to build this yourself:
 - IIS_shortname_scanner.jar
 - config.xml
 - run.bat
 
-If you need to compile this scanner, Java JDK 6 or 7 can be used: http://www.oracle.com/technetwork/java/javase/downloads/index.html
-It should be also straight forward to open this project in Eclipse.
+Remember to use Java v7.
+
+You can also compile this application yourself. Please submit any issues in GitHub for further investigation.
+It should be straight forward to open this project in Eclipse as well.
 
 Usage
 -------
