@@ -80,6 +80,16 @@ DETAILS:
 Note 1: Edit config.xml file to change the scanner settings and add additional headers.
 Note 2: Sometimes it does not work for the first time and you need to try again.
 
+
+Recommendation to rectify this issue
+---------------------------------------
+Deploy IIS with 8.3 names disabled by creating the following registry key on a Windows operating system:
+	Key:   HKLM\SYSTEM\CurrentControlSet\Control\FileSystem
+	Name:  NtfsDisable8dot3NameCreation 
+	Value:        1 
+The web folder needs to be recreated, as the change to the NtfsDisable8dot3NameCreation registry entry affects only files and directories that are created after the change, so the files that already exist are not affected.
+
+
 References
 ------------
 One of the new methods: https://soroush.secproject.com/blog/2014/08/iis-short-file-name-disclosure-is-back-is-your-server-vulnerable/
