@@ -22,7 +22,9 @@ It is not easy to find the original file or folder names based on the short name
 
 Installation
 --------------
-You can use the provided JAR file ("IIS_shortname_scanner.jar") directly to run the scanner: java -jar IIS_shortname_scanner.jar
+You only need to download the following files if you do not want to build this yourself:
+- IIS_shortname_scanner.jar
+- config.xml
 
 If you need to compile this scanner, Java JDK 6 or 7 can be used: http://www.oracle.com/technetwork/java/javase/downloads/index.html
 It should be also straight forward to open this project in Eclipse.
