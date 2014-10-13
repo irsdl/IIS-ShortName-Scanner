@@ -58,7 +58,8 @@ DETAILS:
  [URL]: A complete URL - starts with http/https protocol
  [configFile]: path to a new config file which is based on config.xml
 
-
+Examples:
+```
 - Example 0 (to see if the target is vulnerable):
  java -jar IIS_shortname_scanner.jar http://example.com/folder/
 
@@ -76,18 +77,47 @@ DETAILS:
 
 - Example 5 (using a new config file):
  java -jar IIS_shortname_scanner.jar 2 20 http://example.com/folder/ newconfig.xml 
+```
 
 Note 1: Edit config.xml file to change the scanner settings and add additional headers.
 Note 2: Sometimes it does not work for the first time and you need to try again.
 
 
-Recommendation to rectify this issue
----------------------------------------
-Deploy IIS with 8.3 names disabled by creating the following registry key on a Windows operating system:
+How Does It Work?
+------------------
+In the following examples, IIS responds with a different message when a file exists:
+```
+http://target/folder/valid*~1.*/.aspx
+http://target/folder/invalid*~1.*/.aspx
+```
+
+However, different IIS servers may respond differently, and for instance some of them may work with the following or other similar patterns:
+```
+http://target/folder/valid*~1.*\.asp
+http://target/folder/invalid*~1.*\.asp
+```
+Method of sending the request such as GET, POST, OPTIONS, DEBUG, ... is also important.
+
+I believe monitoring the requests by using a proxy is the best way of understating this issue and this scanner.
+
+
+How To Fix This Issue
+----------------------
+Microsoft will not patch this security issue. Their last response is as follows:
+```
+Thank you for contacting the Microsoft Security Response Center.  
+
+We appreciate your bringing this to our attention.  Our previous guidance stands: deploy IIS with 8.3 names disabled.  
+```
+
+Therefore, it is recommended to deploy IIS with 8.3 names disabled by creating the following registry key on a Windows operating system:
+```
 	Key:   HKLM\SYSTEM\CurrentControlSet\Control\FileSystem
 	Name:  NtfsDisable8dot3NameCreation 
 	Value:        1 
-The web folder needs to be recreated, as the change to the NtfsDisable8dot3NameCreation registry entry affects only files and directories that are created after the change, so the files that already exist are not affected.
+```
+
+Note: The web folder needs to be recreated, as the change to the NtfsDisable8dot3NameCreation registry entry affects only files and directories that are created after the change, so the files that already exist are not affected.
 
 
 References
