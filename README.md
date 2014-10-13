@@ -25,6 +25,7 @@ Installation
 You only need to download the following files if you do not want to build this yourself:
 - IIS_shortname_scanner.jar
 - config.xml
+- run.bat
 
 If you need to compile this scanner, Java JDK 6 or 7 can be used: http://www.oracle.com/technetwork/java/javase/downloads/index.html
 It should be also straight forward to open this project in Eclipse.
