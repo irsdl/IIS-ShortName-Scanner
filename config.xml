@@ -33,7 +33,7 @@
 	<entry key="maxDelayAfterEachRequest">0</entry>
 	
 	<entry key="magicFinalPartDelimiter">,</entry>
-	<entry key="magicFinalPartList"><![CDATA[\a.asp,/a.asp,\a.aspx,/a.aspx,/a.shtml,/a.asmx,/a.ashx,/a.config,/a.php,/a.jpg,/webresource.axd,,/a.xxx]]></entry>
+	<entry key="magicFinalPartList"><![CDATA[\a.aspx,\a.asp,/a.aspx,/a.asp,/a.shtml,/a.asmx,/a.ashx,/a.config,/a.php,/a.jpg,/webresource.axd,,/a.xxx]]></entry>
 	
 	<!-- in Windows we can sometimes use > instead of ? -->
 	<entry key="questionMarkSymbol"><![CDATA[?]]></entry>
@@ -53,6 +53,6 @@
 	<entry key="acceptableDifferenceLengthBetweenResponses">10</entry>
 	
 	<entry key="requestMethodDelimiter">,</entry>
-	<entry key="requestMethod"><![CDATA[OPTIONS,GET,DEBUG,POST,HEAD,TRACK,TRACE]]></entry>
+	<entry key="requestMethod"><![CDATA[DEBUG,OPTIONS,GET,POST,HEAD,TRACK,TRACE]]></entry>
 
 </properties>
