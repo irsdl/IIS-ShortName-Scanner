@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<!-- Configuration of the Ant build system to generate a Jar file --> 
+<project name="IIS_shortname_scanner" default="CreateJar">
+	<property name="projectHome" location="." />
+	<target name="CreateJar" description="Create Jar file">
+		<jar destfile="${projectHome}/IIS_shortname_scanner.jar" basedir="${projectHome}/bin">
+			<manifest>
+			        <attribute name="Main-Class" value="IIS_ShortName_Scanner"/>
+			        <attribute name="Ant-Version" value="${ant.version}"/> 
+			        <attribute name="Created-By" value="JDK ${java.version} (${java.vendor})"/>			
+			 </manifest>
+		</jar>
+	</target>
+</project>
