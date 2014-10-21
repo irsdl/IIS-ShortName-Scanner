@@ -35,7 +35,7 @@ public class IIS_ShortName_Scanner {
 	private static int acceptableDifferenceLengthBetweenResponses;
 	private static boolean onlyCheckForVulnerableSite = false;
 	private static String configFile = "config.xml";
-	private final static String strVersion = "2.2.0 - 13October2014";
+	private final static String strVersion = "2.3.0 - 21October2014";
 	public Set<String> finalResultsFiles = new TreeSet<String>();
 	public Set<String> finalResultsDirs = new TreeSet<String>();
 	private static String[] arrayScanList;
@@ -57,7 +57,11 @@ public class IIS_ShortName_Scanner {
 	private ThreadPool threadPool = new ThreadPool(0);
 	private long reqCounter = 0;
 	private Proxy proxy;
-
+	private int sleepTime = 2; // 2 seconds sleep when we have network error!
+	private boolean boolIsNetworkReliable = true;
+	private static String nameStartsWith;
+	private static String extStartsWith;
+	
 	public static void main(String[] args) throws Exception {
 		// Get URL from input!
 		IIS_ShortName_Scanner obj = new IIS_ShortName_Scanner();
@@ -73,10 +77,9 @@ public class IIS_ShortName_Scanner {
 						url = console.readLine("What is the target (e.g. http://localhost:8080/folder/)? ");
 						if(!url.equals("") && url.length()>5){
 							
-
 							String _hasnewConfigFile = "";
 							
-							_hasnewConfigFile = console.readLine("Do you want to use a new config file [Y=Yes, Anything Else=No]?");
+							_hasnewConfigFile = console.readLine("Do you want to use a new config file [Y=Yes, Anything Else=No]? ");
 							if(_hasnewConfigFile.toLowerCase().equals("y")||_hasnewConfigFile.toLowerCase().equals("yes")){
 								String _newConfigFile = console.readLine("New config file?");
 								if(!_newConfigFile.equals(""))
@@ -156,15 +159,21 @@ public class IIS_ShortName_Scanner {
 						url = args[2];
 					}
 				}
-
+				
 				// Basic check for the URL
-				if(url.length()<8) throw new Exception(); // URL is too short
+				if(url.length()<8) throw new Exception("URL is too short!"); // URL is too short
 				if(url.indexOf("?")>0)
 					url = url.substring(0, url.indexOf("?"));
 				if(url.indexOf(";")>0)
 					url = url.substring(0, url.indexOf(";"));
 				if(!url.endsWith("/") && url.lastIndexOf("/")<8)
-					url += "/";
+					url += "/"; // add slash after the domain to the root dir
+				if(!url.endsWith("/"))
+					System.out.println("\r\nWARNING: URL does not end with a slash character (/) - last folder will be ignored!");
+				if(!url.toLowerCase().startsWith("http://") && !url.toLowerCase().startsWith("https://"))
+					System.out.println("WARNING: URL does not start with HTTP:// or HTTPS:// protocol - this may fail the scanner completely!");
+				System.out.println();
+				
 				url = url.substring(0, url.lastIndexOf("/")+1);
 				if(url.length()<8) throw new Exception(); // URL is too short
 				
@@ -184,7 +193,7 @@ public class IIS_ShortName_Scanner {
 				if(maxDelayAfterEachRequest==0){
 					String delayMilliseconds = "0";
 					if(console!=null){
-						delayMilliseconds = console.readLine("How much delay do you want after each request in milliseconds [default=0]?");
+						delayMilliseconds = console.readLine("How much delay do you want after each request in milliseconds [default=0]? ");
 						if(!delayMilliseconds.equals("") && obj.isLong(delayMilliseconds)){
 							maxDelayAfterEachRequest = Long.parseLong(delayMilliseconds);
 							if(maxDelayAfterEachRequest<0){
@@ -199,13 +208,13 @@ public class IIS_ShortName_Scanner {
 				String hasProxy = "No";
 				if(proxyServerName=="" || proxyServerPort ==0){
 					if(console!=null){
-						hasProxy = console.readLine("Do you want to use proxy [Y=Yes, Anything Else=No]?");
+						hasProxy = console.readLine("Do you want to use proxy [Y=Yes, Anything Else=No]? ");
 						if(hasProxy.toLowerCase().equals("y")||hasProxy.toLowerCase().equals("yes")){
-							String _proxyServerName = console.readLine("Proxy server Name?");
+							String _proxyServerName = console.readLine("Proxy server Name? ");
 
 							String _proxyServerPort = "0";
 							if(!_proxyServerName.equals("")){
-								_proxyServerPort = console.readLine("Proxy server port?");
+								_proxyServerPort = console.readLine("Proxy server port? ");
 								if(!_proxyServerPort.equals("") && obj.isInteger(_proxyServerPort)){
 									// We can set the proxy server now
 									proxyServerName = _proxyServerName;
@@ -241,14 +250,19 @@ public class IIS_ShortName_Scanner {
 				
 				if(console!=null && args.length==0){
 					// pause for output
-					console.readLine("\r\nPress ENTER to quite...");
+					console.readLine("\r\nPress ENTER to quit...");
 				}
 			} else {
 				showUsage();
 			}
 
 		} catch (Exception err) {
-			showUsage();
+			if (debugMode) {
+				err.printStackTrace();
+			}else{
+				if(System.console()!=null) System.err.println("An error has occured: " + err.getMessage());
+				if (args.length != 0) showUsage();
+			}
 		}
 	}
 
@@ -297,7 +311,7 @@ public class IIS_ShortName_Scanner {
 					additionalQuery = properties.getProperty(key,"?&aspxerrorpath=/");
 					break;
 				case "inscopecharacters":
-					scanList = properties.getProperty(key,"0123456789abcdefghijklmnopqrstuvwxyz!#$%&'()-@^_`{}~");
+					scanList = properties.getProperty(key,"ETAONRISHDLFCMUGYPWBVKJXQZ0123456789!#$%&'()-@^_`{}~");
 					break;
 				case "maxconnectiontimeout":
 					try{
@@ -361,6 +375,18 @@ public class IIS_ShortName_Scanner {
 						acceptableDifferenceLengthBetweenResponses = -1;
 					}
 					break;
+				case "namestartswith":
+					nameStartsWith = properties.getProperty(key,"");
+					if(nameStartsWith.length()>5){
+						nameStartsWith = nameStartsWith.substring(0, 5);
+					}
+					break;
+				case "extstartswith":
+					extStartsWith = properties.getProperty(key,"");
+					if(extStartsWith.length()>2){
+						extStartsWith = extStartsWith.substring(0, 3);
+					}
+					break;
 				default:
 					System.out.println("Unknown item in config file: " + key);
 				}
@@ -373,10 +399,10 @@ public class IIS_ShortName_Scanner {
 			requestMethod = requestMethodString.split(requestMethodDelimiter);
 
 		} catch (FileNotFoundException e) {
-			System.out.println("Error: config file was not found: " + configFile);
+			System.err.println("Error: config file was not found: " + configFile);
 			throw new Exception();
 		} catch (IOException e) {
-			System.out.println("Error in loading config file: " + configFile);
+			System.err.println("Error in loading config file: " + configFile);
 			throw new Exception();
 		}	
 	}
@@ -476,15 +502,21 @@ public class IIS_ShortName_Scanner {
 			String additionalData = "";
 			for (String s : finalResultsDirs) {
 				additionalData = "";
-				if  (s.indexOf("~") < 6){
-					if  (s.indexOf("~") == 5 && s.matches(".*(\\w\\d|\\d\\w).*")){
-						additionalData = " -- Possible directory name = " + s.substring(0,s.indexOf("~"));
+				String currentName = s;
+				String currentExt = "";
+				if(s.length() - s.lastIndexOf(".") <= 3){
+					currentName = s.substring(0, s.lastIndexOf("."));
+					currentExt = s.substring(s.lastIndexOf("."));
+				}
+				if  (currentName.lastIndexOf("~") < 6){
+					if  (currentName.lastIndexOf("~") == 5 && s.matches(".*(\\w\\d|\\d\\w).*")){
+						additionalData = " -- Possible directory name = " + s.substring(0,currentName.lastIndexOf("~"));
 					}else{
-						additionalData = " -- Actual directory name = " + s.substring(0,s.indexOf("~"));
+						additionalData = " -- Actual directory name = " + s.substring(0,currentName.lastIndexOf("~"));
 					}
 				}
 				if  (s.length() - s.lastIndexOf(".") <= 3)
-					additionalData += " -- Actual extension = " + s.substring(s.lastIndexOf("."));
+					additionalData += " -- Actual extension = " + currentExt;
 
 				System.out.println("Dir: " + s + additionalData);
 
@@ -492,15 +524,21 @@ public class IIS_ShortName_Scanner {
 
 			for (String s : finalResultsFiles) {
 				additionalData = "";
-				if  (s.indexOf("~") < 6){	
-					if  (s.indexOf("~") == 5 && s.matches(".*(\\w\\d|\\d\\w).*")){
-						additionalData = " -- Possible file name = " + s.substring(0,s.indexOf("~"));
+				String currentName = s;
+				String currentExt = "";
+				if(s.length() - s.lastIndexOf(".") <= 3){
+					currentName = s.substring(0, s.lastIndexOf("."));
+					currentExt = s.substring(s.lastIndexOf("."));
+				}
+				if  (currentName.lastIndexOf("~") < 6){	
+					if  (currentName.lastIndexOf("~") == 5 && s.matches(".*(\\w\\d|\\d\\w).*")){
+						additionalData = " -- Possible file name = " + s.substring(0,currentName.lastIndexOf("~"));
 					}else{
-						additionalData = " -- Actual file name = " + s.substring(0,s.indexOf("~"));
+						additionalData = " -- Actual file name = " + s.substring(0,currentName.lastIndexOf("~"));
 					}
 				}
 				if  (s.length() - s.lastIndexOf(".") <= 3)
-					additionalData += " -- Actual extension = " + s.substring(s.lastIndexOf("."));
+					additionalData += " -- Actual extension = " + currentExt;
 				System.out.println("File: " + s + additionalData);
 			}
 		}
@@ -517,6 +555,11 @@ public class IIS_ShortName_Scanner {
 		if(!boolIsExtensionReliable){
 			System.out.println("File extensions could not be verified. you may have false positive results. -> manual check is needed.");
 		}
+		
+		// Show message when there was network error
+		if(!boolIsNetworkReliable){
+			System.out.println("Some network problems were detected and the results can be unreliable. Please try again with less threads.");
+		}
 
 	}
 
@@ -524,9 +567,13 @@ public class IIS_ShortName_Scanner {
 		try {
 			ThreadPool localThreadPool = new ThreadPool(concurrentThreads);
 			for (int i = 1; i < arrayScanList.length; i++) {
-				localThreadPool.runTask(multithread_NameCharPurifier(arrayScanList[i]));
-				if(boolIsExtensionReliable)
+				
+				if(nameStartsWith.length()<6)
+					localThreadPool.runTask(multithread_NameCharPurifier(arrayScanList[i]));
+				
+				if(boolIsExtensionReliable && extStartsWith.length() < 3){
 					localThreadPool.runTask(multithread_ExtensionCharPurifier(arrayScanList[i]));
+				}
 			}
 			localThreadPool.join();
 			arrayScanListName=(String[])scanListName.toArray(new String[0]);
@@ -544,9 +591,19 @@ public class IIS_ShortName_Scanner {
 
 			public void run() {
 				try {
-					String statusCode = GetStatus("/*" + strInput + asteriskSymbol + "~1*" + magicFinalPart); // Should be valid to be added to the list
+					String statusCode = GetStatus("/" + nameStartsWith + asteriskSymbol + strInput + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart); // Should be valid to be added to the list
+					
+					// when extension should start with something
+					if(!extStartsWith.equals(""))
+						statusCode = GetStatus("/" + nameStartsWith + asteriskSymbol + strInput + asteriskSymbol + "~1" + asteriskSymbol + "." + extStartsWith + magicFileExtension + magicFinalPart);
+						
+					
 					if (statusCode.equals("404")) {
 						statusCode = GetStatus("/1234567890" + strInput + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart); // It is obviously invalid, but some URL rewriters are sensitive against some characters! 
+						// when extension should start with something
+						if(!magicFileExtension.equals(""))
+							statusCode = GetStatus("/1234567890" + strInput + asteriskSymbol + "~1" + asteriskSymbol + "." + extStartsWith + magicFileExtension + magicFinalPart); // It is obviously invalid, but some URL rewriters are sensitive against some characters! 
+						
 						if (!statusCode.equals("404")) {
 							addValidCharToName(strInput); // Valid character - add it to the list
 							if (debugMode) {
@@ -573,9 +630,9 @@ public class IIS_ShortName_Scanner {
 
 			public void run() {
 				try {
-					String statusCode = GetStatus("/" + asteriskSymbol + "~1." + asteriskSymbol + strInput + asteriskSymbol + magicFinalPart); // Should be valid to be added to the list
+					String statusCode = GetStatus("/" + nameStartsWith + asteriskSymbol + "~1." + extStartsWith + asteriskSymbol + strInput + asteriskSymbol + magicFinalPart); // Should be valid to be added to the list
 					if (statusCode.equals("404")) {
-						statusCode = GetStatus("/" + asteriskSymbol + "~1." + asteriskSymbol + strInput + "1234567890" + magicFinalPart); // It is obviously invalid, but some URL rewriters are sensitive against some characters!
+						statusCode = GetStatus("/" + nameStartsWith + asteriskSymbol + "~1." + asteriskSymbol + strInput + "1234567890" + magicFinalPart); // It is obviously invalid, but some URL rewriters are sensitive against some characters!
 						if (!statusCode.equals("404")) {
 							addValidCharToExtension(strInput); // Valid character - add it to the list
 							if (debugMode) {
@@ -597,20 +654,31 @@ public class IIS_ShortName_Scanner {
 		scanListExtension.add(strInput);
 	}
 
-	private Runnable multithread_iterateScanFileName(final String strInput) throws Exception {
+	private Runnable multithread_iterateScanFileName(final String strInputFinal) throws Exception {
 		return new Runnable() {
 
 			public void run() {
 				try {
+					String strInput = strInputFinal;
+					if(strInput.equals("") && !nameStartsWith.equals("")){
+						strInput = nameStartsWith;
+					}
+					boolean atLeastOneSuccess = false;
 					for (int i = 0; i < arrayScanListName.length; i++) {
 						String newStr = strInput + arrayScanListName[i];
-						//System.out.println(newStr);
-						String statusCode = GetStatus("/" + newStr + magicFileName + magicFinalPart);
-						String internalMessage = "\r" + marker[i % marker.length] + " " + strInput + arrayScanListName[i].toUpperCase() + "\t\t";
+						
+						String statusCode = "";
+						if(!extStartsWith.equals(""))
+							statusCode = GetStatus("/" + newStr + magicFileName + "." + extStartsWith + magicFileExtension + magicFinalPart);
+						else
+							statusCode = GetStatus("/" + newStr + magicFileName + magicFinalPart);
+							
 						if (showProgress == 2) {
+							String internalMessage = "\r" + marker[i % marker.length] + " " + strInput + arrayScanListName[i].toUpperCase() + "\t\t";
 							System.out.print(internalMessage); // To show the progress! - Just Pretty!
 						}
 						if (statusCode.equals("404")) {
+							atLeastOneSuccess = true;
 							//if(showProgress) System.out.print(internalMessage); // Print new characters to show the success! - Just Pretty!
 							int isItLastFileName = isItLastFileName(newStr);
 							if (isItLastFileName > 0) {
@@ -627,8 +695,13 @@ public class IIS_ShortName_Scanner {
 									}
 									if(boolIsExtensionReliable){
 										fileName += ".";
-										incThreadCounter(1);
-										threadPool.runTask(multithread_iterateScanFileExtension(fileName, ""));
+										if(extStartsWith.length()==3){
+											// we have already found our file as the extension was in the config file
+											addValidFileToResults(fileName.toUpperCase()+extStartsWith);
+										}else{
+											incThreadCounter(1);
+											threadPool.runTask(multithread_iterateScanFileExtension(fileName, ""));
+										}
 										statusCode = GetStatus("/" + newStr + magicFileName.replace("1", Integer.toString(++counter)) + magicFinalPart);
 									}else{
 										if (showProgress > 0)
@@ -646,7 +719,14 @@ public class IIS_ShortName_Scanner {
 								threadPool.runTask(multithread_iterateScanFileName(newStr));
 							}
 						} else {
-							// Ignore it
+							// Ignore it?
+							if(strInput.length() > 0 && strInput.equals(nameStartsWith) && atLeastOneSuccess==false && i==arrayScanList.length-1){
+								// We have a failure here... it should have at least found 1 item!				
+								String unFinishedString = String.format("%1s%2$"+(6-strInput.length())+ "s~?", strInput.toUpperCase(),"?????");
+								if (showProgress > 0)
+									System.out.println("\rFile/Dir: " + unFinishedString + " - possible network/server problem\t\t");
+								addValidDirToResults(unFinishedString);
+							}
 						}
 					}
 					if (showProgress == 2) {
@@ -664,15 +744,25 @@ public class IIS_ShortName_Scanner {
 	}
 
 	private void iterateScanFileName(String strInput) throws Exception {
+		boolean atLeastOneSuccess = false;
+		if(strInput.equals("") && !nameStartsWith.equals("")){
+			strInput = nameStartsWith;
+		}
 		for (int i = 1; i < arrayScanList.length; i++) {
 			String newStr = strInput + arrayScanList[i];
-			//System.out.println(newStr);
-			String statusCode = GetStatus("/" + newStr + magicFileName + magicFinalPart);
-			String internalMessage = "\r" + marker[i % marker.length] + " " + strInput + arrayScanList[i].toUpperCase() + "\t\t";
+			
+			String statusCode = "";
+			if(!extStartsWith.equals(""))
+				statusCode = GetStatus("/" + newStr + magicFileName + "." + extStartsWith + magicFileExtension + magicFinalPart);
+			else
+				statusCode = GetStatus("/" + newStr + magicFileName + magicFinalPart);
+			
 			if (showProgress == 2) {
+				String internalMessage = "\r" + marker[i % marker.length] + " " + strInput + arrayScanList[i].toUpperCase() + "\t\t";
 				System.out.print(internalMessage); // To show the progress! - Just Pretty!
 			}
 			if (statusCode.equals("404")) {
+				atLeastOneSuccess = true;
 				//if(showProgress) System.out.print(internalMessage); // Print new characters to show the success! - Just Pretty!
 				int isItLastFileName = isItLastFileName(newStr);
 				if (isItLastFileName > 0) {
@@ -689,8 +779,12 @@ public class IIS_ShortName_Scanner {
 						}
 						if(boolIsExtensionReliable){
 							fileName += ".";
-							iterateScanFileExtension(fileName, "");
-
+							if(extStartsWith.length()==3){
+								// we have already found our file as the extension was in the config file
+								addValidFileToResults(fileName.toUpperCase()+extStartsWith);
+							}else{
+								iterateScanFileExtension(fileName, "");
+								}
 							statusCode = GetStatus("/" + newStr + magicFileName.replace("1", Integer.toString(++counter)) + magicFinalPart);
 						}else{
 							if (showProgress > 0)
@@ -706,7 +800,14 @@ public class IIS_ShortName_Scanner {
 					iterateScanFileName(newStr);
 				}
 			} else {
-				// Ignore it
+				// Ignore it?
+				if(strInput.length() > 0 && strInput.equals(nameStartsWith) && atLeastOneSuccess==false && i==arrayScanList.length-1){
+					// We have a failure here... it should have at least found 1 item!
+					String unFinishedString = String.format("%1s%2$"+(6-strInput.length())+ "s~?", strInput.toUpperCase(),"?????");
+					if (showProgress > 0)
+						System.out.println("\rFile/Dir: " + unFinishedString + " - possible network/server problem\t\t");
+					addValidDirToResults(unFinishedString);
+				}
 			}
 		}
 		if (showProgress == 2) {
@@ -741,11 +842,16 @@ public class IIS_ShortName_Scanner {
 		return result;
 	}
 
-	private Runnable multithread_iterateScanFileExtension(final String strFilename, final String strInput) throws Exception {
+	private Runnable multithread_iterateScanFileExtension(final String strFilename, final String strInputFinal) throws Exception {
 		return new Runnable() {
 
 			public void run() {
 				try {
+					String strInput = strInputFinal;
+					if(strInput.equals("") && !extStartsWith.equals("")){
+						strInput = extStartsWith;
+					}
+					boolean atLeastOneSuccess = false;
 					for (int i = 0; i < arrayScanListExt.length; i++) {
 						String newStr = "";
 						newStr = strInput + arrayScanListExt[i];
@@ -755,6 +861,7 @@ public class IIS_ShortName_Scanner {
 							System.out.print(internalMessage); // To show the progress! - Just Pretty!
 						}
 						if (statusCode.equals("404")) {
+							atLeastOneSuccess = true;
 							//if(showProgress) System.out.print(internalMessage); // Print new characters to show the success! - Just Pretty!
 							if (isItLastFileExtension(strFilename + newStr)) {
 								// Add it to final list
@@ -772,7 +879,14 @@ public class IIS_ShortName_Scanner {
 								threadPool.runTask(multithread_iterateScanFileExtension(strFilename, newStr));
 							}
 						} else {
-							// Ignore it
+							// Ignore it?
+							if(strInput.length() > 0 && atLeastOneSuccess==false && i==arrayScanList.length-1){
+								// We have a failure here... it should have at least found 1 item!
+								String unFinishedString = strFilename + String.format("%1s%2$"+(3-strInput.length())+"s", strInput.toUpperCase(),"??");
+								if (showProgress > 0)
+									System.out.println("\rFile: " + unFinishedString + " - possible network/server problem\t\t");
+								addValidFileToResults(unFinishedString);
+							}
 						}
 					}
 					if (showProgress == 2) {
@@ -789,6 +903,10 @@ public class IIS_ShortName_Scanner {
 	}
 
 	private void iterateScanFileExtension(String strFilename, String strInput) throws Exception {
+		if(strInput.equals("") && !extStartsWith.equals("")){
+			strInput = extStartsWith;
+		}
+		boolean atLeastOneSuccess = false;
 		for (int i = 1; i < arrayScanList.length; i++) {
 			String newStr = "";
 			newStr = strInput + arrayScanList[i];
@@ -798,6 +916,7 @@ public class IIS_ShortName_Scanner {
 				System.out.print(internalMessage); // To show the progress! - Just Pretty!
 			}
 			if (statusCode.equals("404")) {
+				atLeastOneSuccess = true;
 				//if(showProgress) System.out.print(internalMessage); // Print new characters to show the success! - Just Pretty!
 				if (isItLastFileExtension(strFilename + newStr)) {
 					// Add it to final list
@@ -813,7 +932,14 @@ public class IIS_ShortName_Scanner {
 					iterateScanFileExtension(strFilename, newStr);
 				}
 			} else {
-				// Ignore it
+				// Ignore it?
+				if(strInput.length() > 0 && atLeastOneSuccess==false && i==arrayScanList.length-1){
+					// We have a failure here... it should have at least found 1 item!
+					String unFinishedString = strFilename + String.format("%1s%2$"+(3-strInput.length())+"s", strInput.toUpperCase(),"??");
+					if (showProgress > 0)
+						System.out.println("\rFile: " + unFinishedString + " - possible network/server problem\t\t");
+					addValidFileToResults(unFinishedString);
+				}
 			}
 		}
 		if (showProgress == 2) {
@@ -1044,6 +1170,12 @@ public class IIS_ShortName_Scanner {
 					return true;
 				}
 			});
+			
+			// removing additional slash character!
+			if(strAddition.startsWith("/") && destURL.endsWith("/")){
+				strAddition = strAddition.substring(1);
+			}
+			
 			String urlEncodedStrAddition = URLEncoder.encode(strAddition, "UTF-8");
 			urlEncodedStrAddition = urlEncodedStrAddition.replace("*","%2A"); // Java does not encode asterisk character
 			URL finalURL = new URL(destURL + urlEncodedStrAddition + additionalQuery);
@@ -1088,9 +1220,27 @@ public class IIS_ShortName_Scanner {
 
 				content = conn.getContent();
 			}catch(java.net.ConnectException e){
-				if (debugMode) {
-					System.err.println("Error: Connection error. Please check the protocol, the domain name, or the proxy server.");
+				
+				if(concurrentThreads>10){
+					concurrentThreads = 10;
+				}else if(concurrentThreads>5){
+					concurrentThreads = 5;
+				}else if(concurrentThreads>1){
+					concurrentThreads = 1;
 				}
+				
+				boolIsNetworkReliable = false;
+				Thread.sleep(sleepTime*1000);
+				if(sleepTime<10)
+					sleepTime++;
+				
+				if (showProgress==2 || debugMode) {
+					//System.err.println("Error: Connection error. Please check the protocol, the domain name, or the proxy server.");
+					System.err.println("Number of threads should be reduced - can be too late but reduced to:" + concurrentThreads);
+					System.err.println("Sleep for "+sleepTime+" seconds...");
+					throw new Exception("Error: Connection error. Please check the protocol, the domain name, or the proxy server.");
+				}
+				
 			} catch (Exception e) {
 				if(responseHeaderStatus == null){
 					//time-out

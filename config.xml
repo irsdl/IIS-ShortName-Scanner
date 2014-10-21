@@ -3,7 +3,7 @@
 <properties>
 	<comment>IIS Short File/Folder Name (8.3) Scanner - Configuration File</comment>
 	
-	<entry key="debug">false</entry>
+	<entry key="debug">true</entry>
 	
 	<entry key="userAgent"><![CDATA[Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/534.10 (KHTML, like Gecko) Chrome/8.0.552.215 Safari/534.10]]></entry>
 	
@@ -18,8 +18,9 @@
 	<entry key="URLSuffix"><![CDATA[?&aspxerrorpath=/]]></entry>
 	
 	<!-- discard any of these to have more speed! -->
-	<entry key="inScopeCharacters"><![CDATA[0123456789abcdefghijklmnopqrstuvwxyz!#$%&'()-@^_`{}~]]></entry>
-	
+	<!-- default is based on letter frequencies http://en.wikipedia.org/wiki/Letter_frequency -->
+	<entry key="inScopeCharacters"><![CDATA[ETAONRISHDLFCMUGYPWBVKJXQZ0123456789_-$~()&!#%'@^`{}]]></entry>
+		
 	<!-- in Milliseconds -->
 	<entry key="maxConnectionTimeOut">20000</entry>
 	
@@ -54,5 +55,12 @@
 	
 	<entry key="requestMethodDelimiter">,</entry>
 	<entry key="requestMethod"><![CDATA[DEBUG,OPTIONS,GET,POST,HEAD,TRACK,TRACE]]></entry>
-
+	
+	<!-- This is used to find file or directory names that start with this string - should be less than 6 characters  -->
+	<entry key="nameStartsWith"><![CDATA[]]></entry>
+	
+	<!-- This is used to find file or directory extensions that start with this string - should be less than 4 characters  -->
+	<!-- This may not be reliable when the extension discovery is not reliable on a target -->
+	<entry key="extStartsWith"><![CDATA[]]></entry>
+	
 </properties>
