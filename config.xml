@@ -3,7 +3,7 @@
 <properties>
 	<comment>IIS Short File/Folder Name (8.3) Scanner - Configuration File</comment>
 	
-	<entry key="debug">true</entry>
+	<entry key="debug">false</entry>
 	
 	<entry key="userAgent"><![CDATA[Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/534.10 (KHTML, like Gecko) Chrome/8.0.552.215 Safari/534.10]]></entry>
 	

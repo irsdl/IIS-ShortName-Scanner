@@ -35,7 +35,7 @@ public class IIS_ShortName_Scanner {
 	private static int acceptableDifferenceLengthBetweenResponses;
 	private static boolean onlyCheckForVulnerableSite = false;
 	private static String configFile = "config.xml";
-	private final static String strVersion = "2.3.0 - 21October2014";
+	private final static String strVersion = "2.3.1 - 28October2014";
 	public Set<String> finalResultsFiles = new TreeSet<String>();
 	public Set<String> finalResultsDirs = new TreeSet<String>();
 	private static String[] arrayScanList;
@@ -1258,10 +1258,10 @@ public class IIS_ShortName_Scanner {
 			charset = "utf-8";
 			// Get the content.
 
-			if (stream != null) {
+			if (stream != null && length > -1) {
 				content = readStream(length, stream, charset);
 				stream.close();
-			} else if (content != null && content instanceof java.io.InputStream) {
+			} else if (content != null && content instanceof java.io.InputStream && length > -1) {
 				content = readStream(length, (java.io.InputStream) content, charset);
 			}
 
@@ -1385,9 +1385,13 @@ public class IIS_ShortName_Scanner {
 		if (charset == null) {
 			return bytes;
 		}
-		try {
-			return new String(bytes, charset);
-		} catch (java.io.UnsupportedEncodingException e) {
+		
+		if(bytes!=null){
+			try {
+				return new String(bytes, charset);
+			} catch (java.io.UnsupportedEncodingException e) {
+				
+			} 
 		}
 		return bytes;
 	}
