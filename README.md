@@ -1,4 +1,4 @@
-IIS Short Name Scanner v2.3.1
+IIS Short Name Scanner v2.3.2
 =====================
 The latest version of scanner for IIS short file name (8.3) disclosure vulnerability by using the tilde (~) character.
 

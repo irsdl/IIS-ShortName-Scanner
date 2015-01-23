@@ -54,13 +54,23 @@
 	<entry key="acceptableDifferenceLengthBetweenResponses">10</entry>
 	
 	<entry key="requestMethodDelimiter">,</entry>
-	<entry key="requestMethod"><![CDATA[DEBUG,OPTIONS,GET,POST,HEAD,TRACK,TRACE]]></entry>
+	<entry key="requestMethod"><![CDATA[DEBUG,OPTIONS,GET,POST,HEAD,TRACE]]></entry>
 	
-	<!-- This is used to find file or directory names that start with this string - should be less than 6 characters  -->
+	<!-- This will be used to find file or directory names that start with this string - should be less than 6 characters  -->
 	<entry key="nameStartsWith"><![CDATA[]]></entry>
 	
-	<!-- This is used to find file or directory extensions that start with this string - should be less than 4 characters  -->
+	<!-- This will be used to find file or directory extensions that start with this string - should be less than 4 characters  -->
 	<!-- This may not be reliable when the extension discovery is not reliable on a target -->
 	<entry key="extStartsWith"><![CDATA[]]></entry>
+	
+	<!-- This will be used to set a maximum value on the "NUMBER_HERE" parameter in FILENAME~NUMBER_HERE (example: DEFAUL~2.ASP) -->
+	<!-- The minimum value for this parameter is 1 -->
+	<entry key="maxNumericalPart">10</entry>
+	
+	<!-- This will be used to set a maximum value on the "NUMBER_HERE" parameter in FILENAME~NUMBER_HERE even when the previous number is not available -->
+	<!-- For instance, if it is set to 3, when we have DEFAUL~1.ASP and we do not have DEFAULT~2.ASP, it still checks DEFAUL~3.asp -->
+	<!-- This parameter automatically override the "maxNumericalPart" paremeter when "forceNumericalPart > maxNumericalPart" -->
+	<!-- The minimum value for this parameter is 1 -->
+	<entry key="forceNumericalPart">3</entry>
 	
 </properties>

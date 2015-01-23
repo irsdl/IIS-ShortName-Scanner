@@ -35,7 +35,7 @@ public class IIS_ShortName_Scanner {
 	private static int acceptableDifferenceLengthBetweenResponses;
 	private static boolean onlyCheckForVulnerableSite = false;
 	private static String configFile = "config.xml";
-	private final static String strVersion = "2.3.1 - 28October2014";
+	private final static String strVersion = "2.3.2 - 23January2015";
 	public Set<String> finalResultsFiles = new TreeSet<String>();
 	public Set<String> finalResultsDirs = new TreeSet<String>();
 	private static String[] arrayScanList;
@@ -50,7 +50,7 @@ public class IIS_ShortName_Scanner {
 	private String magicFinalPart;
 	private String reliableRequestMethod;
 	private String validStatus = "";
-	private String invalidStatus = "";
+	private List<String> invalidStatus = new ArrayList<String>();;
 	private boolean boolIsQuestionMarkReliable = false;
 	private boolean boolIsExtensionReliable = false;
 	private int threadCounter = 0;
@@ -59,8 +59,10 @@ public class IIS_ShortName_Scanner {
 	private Proxy proxy;
 	private int sleepTime = 2; // 2 seconds sleep when we have network error!
 	private boolean boolIsNetworkReliable = true;
-	private static String nameStartsWith;
-	private static String extStartsWith;
+	private static String nameStartsWith = "";
+	private static String extStartsWith = "";
+	private static int maxNumericalPart = 10;
+	private static int forceNumericalPart = 1;
 	
 	public static void main(String[] args) throws Exception {
 		// Get URL from input!
@@ -387,6 +389,14 @@ public class IIS_ShortName_Scanner {
 						extStartsWith = extStartsWith.substring(0, 3);
 					}
 					break;
+				case "maxnumericalpart":
+					maxNumericalPart = Integer.parseInt(properties.getProperty(key,"10"));
+					if(maxNumericalPart<1) maxNumericalPart = 1; // set to minimum
+					break;
+				case "forcenumericalpart":
+					forceNumericalPart = Integer.parseInt(properties.getProperty(key,"1"));
+					if(forceNumericalPart<1) forceNumericalPart = 1; // set to minimum
+					break;
 				default:
 					System.out.println("Unknown item in config file: " + key);
 				}
@@ -397,7 +407,9 @@ public class IIS_ShortName_Scanner {
 			additionalHeaders = additionalHeadersString.split(additionalHeadersDelimiter);
 			magicFinalPartList = magicFinalpartStringList.split(magicFinalPartDelimiter);
 			requestMethod = requestMethodString.split(requestMethodDelimiter);
-
+			if (forceNumericalPart > maxNumericalPart){
+				maxNumericalPart = forceNumericalPart;
+			}
 		} catch (FileNotFoundException e) {
 			System.err.println("Error: config file was not found: " + configFile);
 			throw new Exception();
@@ -593,21 +605,28 @@ public class IIS_ShortName_Scanner {
 				try {
 					String statusCode = GetStatus("/" + nameStartsWith + asteriskSymbol + strInput + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart); // Should be valid to be added to the list
 					
+					if (debugMode) {
+						System.out.println("Is this character valid in name? " + strInput);
+					}
 					// when extension should start with something
 					if(!extStartsWith.equals(""))
 						statusCode = GetStatus("/" + nameStartsWith + asteriskSymbol + strInput + asteriskSymbol + "~1" + asteriskSymbol + "." + extStartsWith + magicFileExtension + magicFinalPart);
-						
 					
-					if (statusCode.equals("404")) {
-						statusCode = GetStatus("/1234567890" + strInput + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart); // It is obviously invalid, but some URL rewriters are sensitive against some characters! 
-						// when extension should start with something
-						if(!magicFileExtension.equals(""))
-							statusCode = GetStatus("/1234567890" + strInput + asteriskSymbol + "~1" + asteriskSymbol + "." + extStartsWith + magicFileExtension + magicFinalPart); // It is obviously invalid, but some URL rewriters are sensitive against some characters! 
-						
-						if (!statusCode.equals("404")) {
-							addValidCharToName(strInput); // Valid character - add it to the list
-							if (debugMode) {
-								System.out.println("Valid character in name:" + strInput);
+					if (statusCode.equals("valid")) {
+						String tempInvalidStatusCode = GetStatus("/" + nameStartsWith + asteriskSymbol + new String(new char[7]).replace("\0", strInput) + asteriskSymbol + "~1" + asteriskSymbol + "." + extStartsWith + magicFileExtension + magicFinalPart); // It is obviously invalid, but some URL rewriters are sensitive against some characters!
+						// So if tempInvalidStatusCode is also equal to 404 then something is very wrong!
+						if (!tempInvalidStatusCode.equals("valid")) {	
+							statusCode = GetStatus("/1234567890" + strInput + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart); // It is obviously invalid, but some URL rewriters are sensitive against some characters! 
+							
+							// when extension should start with something
+							if(!magicFileExtension.equals(""))
+								statusCode = GetStatus("/1234567890" + strInput + asteriskSymbol + "~1" + asteriskSymbol + "." + extStartsWith + magicFileExtension + magicFinalPart); // It is obviously invalid, but some URL rewriters are sensitive against some characters! 
+							
+							if (!statusCode.equals("valid")) {
+								addValidCharToName(strInput); // Valid character - add it to the list
+								if (debugMode) {
+									System.out.println("Valid character in name:" + strInput);
+								}
 							}
 						}
 					}
@@ -631,12 +650,20 @@ public class IIS_ShortName_Scanner {
 			public void run() {
 				try {
 					String statusCode = GetStatus("/" + nameStartsWith + asteriskSymbol + "~1." + extStartsWith + asteriskSymbol + strInput + asteriskSymbol + magicFinalPart); // Should be valid to be added to the list
-					if (statusCode.equals("404")) {
-						statusCode = GetStatus("/" + nameStartsWith + asteriskSymbol + "~1." + asteriskSymbol + strInput + "1234567890" + magicFinalPart); // It is obviously invalid, but some URL rewriters are sensitive against some characters!
-						if (!statusCode.equals("404")) {
-							addValidCharToExtension(strInput); // Valid character - add it to the list
-							if (debugMode) {
-								System.out.println("Valid character in extension:" + strInput);
+					if (debugMode) {
+						System.out.println("Is this character valid in extension? " + strInput);
+					}
+					
+					if (statusCode.equals("valid")) {
+						String tempInvalidStatusCode = GetStatus("/" + nameStartsWith + asteriskSymbol + "~1." + extStartsWith + asteriskSymbol + new String(new char[4]).replace("\0", strInput) + asteriskSymbol + magicFinalPart); // It is obviously invalid, but some URL rewriters are sensitive against some characters!
+						// So if tempInvalidStatusCode is also equal to 404 then something is very wrong!
+						if (!tempInvalidStatusCode.equals("valid")) {
+							statusCode = GetStatus("/" + nameStartsWith + asteriskSymbol + "~1." + asteriskSymbol + strInput + "1234567890" + magicFinalPart); // It is obviously invalid, but some URL rewriters are sensitive against some characters!
+							if (!statusCode.equals("valid")) {
+								addValidCharToExtension(strInput); // Valid character - add it to the list
+								if (debugMode) {
+									System.out.println("Valid character in extension:" + strInput);
+								}
 							}
 						}
 					}
@@ -677,14 +704,14 @@ public class IIS_ShortName_Scanner {
 							String internalMessage = "\r" + marker[i % marker.length] + " " + strInput + arrayScanListName[i].toUpperCase() + "\t\t";
 							System.out.print(internalMessage); // To show the progress! - Just Pretty!
 						}
-						if (statusCode.equals("404")) {
+						if (statusCode.equals("valid")) {
 							atLeastOneSuccess = true;
 							//if(showProgress) System.out.print(internalMessage); // Print new characters to show the success! - Just Pretty!
 							int isItLastFileName = isItLastFileName(newStr);
 							if (isItLastFileName > 0) {
 								// Add it to final list
 								int counter = 1;
-								while (statusCode.equals("404")) {
+								while ((statusCode.equals("valid") && counter <= maxNumericalPart) || (counter <= forceNumericalPart && counter > 1)) {
 									String fileName = newStr + "~" + counter;
 									// Find Extension
 									if (isItFolder(fileName) == 1) {
@@ -761,14 +788,14 @@ public class IIS_ShortName_Scanner {
 				String internalMessage = "\r" + marker[i % marker.length] + " " + strInput + arrayScanList[i].toUpperCase() + "\t\t";
 				System.out.print(internalMessage); // To show the progress! - Just Pretty!
 			}
-			if (statusCode.equals("404")) {
+			if (statusCode.equals("valid")) {
 				atLeastOneSuccess = true;
 				//if(showProgress) System.out.print(internalMessage); // Print new characters to show the success! - Just Pretty!
 				int isItLastFileName = isItLastFileName(newStr);
 				if (isItLastFileName > 0) {
 					// Add it to final list
 					int counter = 1;
-					while (statusCode.equals("404")) {
+					while ((statusCode.equals("valid") && counter <= maxNumericalPart) || (counter <= forceNumericalPart && counter > 1)) {
 						String fileName = newStr + "~" + counter;
 						// Find Extension
 						if (isItFolder(fileName) == 1) {
@@ -825,12 +852,18 @@ public class IIS_ShortName_Scanner {
 			if (strInput.length() < 6) {
 				try {
 					String statusCode = GetStatus("/" + strInput + questionMarkSymbol + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart);
-					if (statusCode.equals("404")) {
+					if (statusCode.equals("valid")) {
 						result = 0; // This file is not completed
 						statusCode = GetStatus("/" + strInput + "~1" + asteriskSymbol + magicFinalPart);
-						if (statusCode.equals("404")) {
-							result = 2; // This file is available but there is more as well
+						if (statusCode.equals("valid")) {
+							result = 2; // This file is available but there are more as well
 						}
+					}else{
+						// Sometimes in rare cases we can see that a virtual directory is still there with more character
+						statusCode = GetStatus("/" + strInput + "~1" + asteriskSymbol + magicFinalPart);
+							if (statusCode.equals("invalid")) {
+								result = 0; // This file is not completed
+							}
 					}
 				} catch (Exception err) {
 					if (debugMode) {
@@ -855,12 +888,17 @@ public class IIS_ShortName_Scanner {
 					for (int i = 0; i < arrayScanListExt.length; i++) {
 						String newStr = "";
 						newStr = strInput + arrayScanListExt[i];
-						String statusCode = GetStatus("/" + strFilename + newStr + magicFileExtension + magicFinalPart);
+						String statusCode = "";
+						if(newStr.length()<=2){
+							statusCode = GetStatus("/" + strFilename + newStr + magicFileExtension + magicFinalPart);
+						}else{
+							statusCode = GetStatus("/" + strFilename + newStr + magicFinalPart);
+						}
 						String internalMessage = "\r" + marker[i % marker.length] + " " + strFilename + strInput + arrayScanListExt[i].toUpperCase() + "\t\t";
 						if (showProgress == 2) {
 							System.out.print(internalMessage); // To show the progress! - Just Pretty!
 						}
-						if (statusCode.equals("404")) {
+						if (statusCode.equals("valid")) {
 							atLeastOneSuccess = true;
 							//if(showProgress) System.out.print(internalMessage); // Print new characters to show the success! - Just Pretty!
 							if (isItLastFileExtension(strFilename + newStr)) {
@@ -880,7 +918,7 @@ public class IIS_ShortName_Scanner {
 							}
 						} else {
 							// Ignore it?
-							if(strInput.length() > 0 && atLeastOneSuccess==false && i==arrayScanList.length-1){
+							if(strInput.length() > 0 && atLeastOneSuccess==false && i==arrayScanListExt.length-1){
 								// We have a failure here... it should have at least found 1 item!
 								String unFinishedString = strFilename + String.format("%1s%2$"+(3-strInput.length())+"s", strInput.toUpperCase(),"??");
 								if (showProgress > 0)
@@ -915,7 +953,7 @@ public class IIS_ShortName_Scanner {
 			if (showProgress == 2) {
 				System.out.print(internalMessage); // To show the progress! - Just Pretty!
 			}
-			if (statusCode.equals("404")) {
+			if (statusCode.equals("valid")) {
 				atLeastOneSuccess = true;
 				//if(showProgress) System.out.print(internalMessage); // Print new characters to show the success! - Just Pretty!
 				if (isItLastFileExtension(strFilename + newStr)) {
@@ -958,7 +996,7 @@ public class IIS_ShortName_Scanner {
 				String[] temp = strInput.split("\\.");
 				if (temp[1].length() >= extLength) {
 					result = true;
-				} else if (GetStatus("/" + strInput + "." + asteriskSymbol + magicFinalPart).equals("404")) {
+				} else if (GetStatus("/" + strInput + "." + asteriskSymbol + magicFinalPart).equals("valid")) {
 					result = true;
 				} else if (!HTTPReqResponse(strInput + magicFinalPart, 0).equals(HTTPReqResponse(strInput + "xxx" + magicFinalPart, 0))) {
 					result = true;
@@ -967,7 +1005,7 @@ public class IIS_ShortName_Scanner {
 			if (!result) {
 				try {
 					String statusCode = GetStatus("/" + strInput + magicFileExtension + magicFinalPart);
-					if (!statusCode.equals("404")) {
+					if (!statusCode.equals("valid")) {
 						result = true;
 					}
 				} catch (Exception err) {
@@ -990,9 +1028,12 @@ public class IIS_ShortName_Scanner {
 			result =1;
 		}else{
 			try {
-				String statusCode = GetStatus("/" + strInput + questionMarkSymbol + magicFinalPart);
-				if (statusCode.equals("404")) {
-					result = 1; // A directory
+				String statusCode1 = GetStatus("/" + strInput + questionMarkSymbol + magicFinalPart);		
+				if (statusCode1.equals("valid")) {
+					String statusCode2 = GetStatus("/" + strInput + asteriskSymbol + magicFinalPart);
+					if(statusCode1.equals(statusCode2)){
+						result = 1; // A directory
+					}
 				}
 			} catch (Exception err) {
 				if (debugMode) {
@@ -1013,15 +1054,26 @@ public class IIS_ShortName_Scanner {
 
 			strAddition = strAddition.replace("//", "/");
 
-			status = HTTPReqResponse(strAddition, 0);
+			String statusResponse = HTTPReqResponse(strAddition, 0);
 			//status = HTTPReqResponseSocket(strAddition, 0);
-
-			if (status.equals(validStatus)) {
-				status = "404";
+			
+			/*
+			// Although it seems it is white-list and should be good, we may miss some results and it is better to use blacklist
+			if (status.equals(statusResponse)) {
+				status = "valid";
 			} else {
-				status = "400";
+				status = "invalid";
+			}
+			*/
+			
+			// blacklist approach to find even more for difficult and strange cases!
+			if (invalidStatus.contains(statusResponse)){
+				status = "invalid";
+			}else{
+				status = "valid";
 			}
 
+			
 		} catch (Exception err) {
 			if (debugMode) {
 				err.printStackTrace();
@@ -1037,29 +1089,52 @@ public class IIS_ShortName_Scanner {
 		try {
 			validStatus = HTTPReqResponse("/" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
 			int validStatusLength = validStatus.length();
-			invalidStatus = HTTPReqResponse("/1234567890" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
-			int invalidStatusLength = invalidStatus.length();
-
-			if (!validStatus.equals(invalidStatus) && !(acceptableDifferenceLengthBetweenResponses>=0 &&
-					Math.abs(invalidStatusLength - validStatusLength)<=acceptableDifferenceLengthBetweenResponses)) {
-				// We need to find the first character that is different in the comparison
-
-
-				String tempInvalidStatus1 = HTTPReqResponse("/0123456789" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
-				int tempInvalidStatus1Length = tempInvalidStatus1.length();
-
-				String tempInvalidStatus2 = HTTPReqResponse("/0123456789" + asteriskSymbol + "~1.1234" + asteriskSymbol + magicFinalPart, 0);
+			String tempInvalidStatus1;
+			tempInvalidStatus1 = HTTPReqResponse("/1234567890" + asteriskSymbol + "~1." + asteriskSymbol + magicFinalPart, 0); // Invalid name
+			int invalidStatus1Length = tempInvalidStatus1.length();
+			
+			
+			if (!validStatus.equals(tempInvalidStatus1) && !(acceptableDifferenceLengthBetweenResponses>=0 &&
+					Math.abs(invalidStatus1Length - validStatusLength)<=acceptableDifferenceLengthBetweenResponses)) {
+				
+				invalidStatus.add(tempInvalidStatus1);
+				
+				// We need to find invalid status messages
+				
+				String tempInvalidStatus2 = HTTPReqResponse("/0123456789" + asteriskSymbol + "~1." + asteriskSymbol + magicFinalPart, 0); // Invalid different name
 				int tempInvalidStatus2Length = tempInvalidStatus2.length();
+				invalidStatus.add(tempInvalidStatus2);
+				
+				String tempInvalidStatus3 = HTTPReqResponse("/0123456789" + asteriskSymbol + "~1.1234" + asteriskSymbol + magicFinalPart, 0); // Invalid name and extension
+				int tempInvalidStatus3Length = tempInvalidStatus3.length();
+				invalidStatus.add(tempInvalidStatus3);
 
+				String tempInvalidStatus4 = HTTPReqResponse("/" + asteriskSymbol + "~1.1234" + asteriskSymbol + magicFinalPart, 0); // Invalid extension
+				//int tempInvalidStatus4Length = tempInvalidStatus3.length();
+				invalidStatus.add(tempInvalidStatus4);
+
+				String tempInvalidStatus5 = HTTPReqResponse("/1234567890" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0); // Invalid name with no extension
+				//int tempInvalidStatus5Length = tempInvalidStatus3.length();
+				invalidStatus.add(tempInvalidStatus5);
+				
+				String tempInvalidStatus6 = HTTPReqResponse("/1234567890" + asteriskSymbol + "~1" + questionMarkSymbol + magicFinalPart, 0); // Invalid name with no extension and question mark symbol
+				//int tempInvalidStatus5Length = tempInvalidStatus3.length();
+				invalidStatus.add(tempInvalidStatus6);
+				
+				String tempInvalidStatus7 = HTTPReqResponse("/" + new String(new char[10]).replace("\0", questionMarkSymbol) + "~1" + asteriskSymbol + magicFinalPart, 0); // Invalid name contains question mark symbol with no extension
+				//int tempInvalidStatus5Length = tempInvalidStatus3.length();
+				invalidStatus.add(tempInvalidStatus7);
+				
+				
 				// If two different invalid requests lead to different responses, we cannot rely on them unless their length difference is negligible!
-				if (tempInvalidStatus1.equals(invalidStatus) || 
+				if (tempInvalidStatus2.equals(tempInvalidStatus1) || 
 						(acceptableDifferenceLengthBetweenResponses>=0 &&
-						Math.abs(invalidStatusLength - tempInvalidStatus1Length)<=acceptableDifferenceLengthBetweenResponses)) 
+						Math.abs(invalidStatus1Length - tempInvalidStatus2Length)<=acceptableDifferenceLengthBetweenResponses)) 
 				{
 
-					if (tempInvalidStatus2.equals(invalidStatus) || 
+					if (tempInvalidStatus2.equals(tempInvalidStatus1) || 
 							(acceptableDifferenceLengthBetweenResponses>=0 && 
-							Math.abs(tempInvalidStatus2Length - tempInvalidStatus1Length)<=acceptableDifferenceLengthBetweenResponses)){
+							Math.abs(tempInvalidStatus3Length - tempInvalidStatus2Length)<=acceptableDifferenceLengthBetweenResponses)){
 						boolIsExtensionReliable = true;
 					}else{
 						boolIsExtensionReliable = false;
@@ -1284,10 +1359,8 @@ public class IIS_ShortName_Scanner {
 					}
 				}
 				finalResponse = finalResponse.replaceAll("(?im)(([\\n\\r\\x00]+)|((server error in).+>)|((physical path).+>)|((requested url).+>)|((handler<).+>)|((notification<).+>)|(\\://[a-zA-Z0-9\\-\\.]+\\.[a-zA-Z]{2,3}(/\\S*)?)|(<!--[\\w\\W]*?-->)|((content-type)[\\s\\:\\=]+[\\w \\d\\=\\[\\,\\:\\-\\/\\;]*)|((length)[\\s\\:\\=]+[\\w \\d\\=\\[\\,\\:\\-\\/\\;]*)|((tag|p3p|expires|date|age|modified|cookie)[\\s\\:\\=]+[^\\r\\n]*)|([\\:\\-\\/\\ ]\\d{1,4})|(: [\\w\\d, :;=/]+\\W)|(^[\\w\\d, :;=/]+\\W$)|(\\d{1,4}[\\:\\-\\/\\ ]\\d{1,4}))", "");
-
-				finalResponse = responseHeaderStatus.toString() + finalResponse;
-
 			}
+			finalResponse = responseHeaderStatus.toString() + finalResponse;
 		} catch (BindException bindException) {
 			try {
 				if (conn != null) {
