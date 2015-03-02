@@ -34,7 +34,7 @@
 	<entry key="maxDelayAfterEachRequest">0</entry>
 	
 	<entry key="magicFinalPartDelimiter">,</entry>
-	<entry key="magicFinalPartList"><![CDATA[\a.aspx,\a.asp,/a.aspx,/a.asp,/a.shtml,/a.asmx,/a.ashx,/a.config,/a.php,/a.jpg,/webresource.axd,,/a.xxx]]></entry>
+	<entry key="magicFinalPartList"><![CDATA[\a.aspx,\a.asp,/a.aspx,/a.asp,/a.shtml,/a.asmx,/a.ashx,/a.config,/a.php,/a.jpg,/webresource.axd,/a.xxx]]></entry>
 	
 	<!-- in Windows we can sometimes use > instead of ? -->
 	<entry key="questionMarkSymbol"><![CDATA[?]]></entry>
