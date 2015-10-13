@@ -35,7 +35,7 @@ public class IIS_ShortName_Scanner {
 	private static int acceptableDifferenceLengthBetweenResponses;
 	private static boolean onlyCheckForVulnerableSite = false;
 	private static String configFile = "config.xml";
-	private final static String strVersion = "2.3.2 - 23January2015";
+	private final static String strVersion = "2.3.3 - 13October2015";
 	public Set<String> finalResultsFiles = new TreeSet<String>();
 	public Set<String> finalResultsDirs = new TreeSet<String>();
 	private static String[] arrayScanList;
@@ -578,7 +578,7 @@ public class IIS_ShortName_Scanner {
 	private void scanListPurifier() {
 		try {
 			ThreadPool localThreadPool = new ThreadPool(concurrentThreads);
-			for (int i = 1; i < arrayScanList.length; i++) {
+			for (int i = 0; i < arrayScanList.length; i++) {
 				
 				if(nameStartsWith.length()<6)
 					localThreadPool.runTask(multithread_NameCharPurifier(arrayScanList[i]));
@@ -775,7 +775,7 @@ public class IIS_ShortName_Scanner {
 		if(strInput.equals("") && !nameStartsWith.equals("")){
 			strInput = nameStartsWith;
 		}
-		for (int i = 1; i < arrayScanList.length; i++) {
+		for (int i = 0; i < arrayScanList.length; i++) {
 			String newStr = strInput + arrayScanList[i];
 			
 			String statusCode = "";
@@ -945,7 +945,7 @@ public class IIS_ShortName_Scanner {
 			strInput = extStartsWith;
 		}
 		boolean atLeastOneSuccess = false;
-		for (int i = 1; i < arrayScanList.length; i++) {
+		for (int i = 0; i < arrayScanList.length; i++) {
 			String newStr = "";
 			newStr = strInput + arrayScanList[i];
 			String statusCode = GetStatus("/" + strFilename + newStr + magicFileExtension + magicFinalPart);
