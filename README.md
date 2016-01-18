@@ -1,4 +1,4 @@
-IIS Short Name Scanner v2.3.3
+IIS Short Name Scanner v2.3.4
 =====================
 The latest version of scanner for IIS short file name (8.3) disclosure vulnerability by using the tilde (~) character.
 
@@ -26,6 +26,7 @@ It has been compiled by using JDK 7. You only need to download the following fil
 - IIS_shortname_scanner.jar
 - config.xml
 - run.bat
+- multi_targets.sh
 
 Remember to use Java v7.
 
@@ -52,6 +53,9 @@ USAGE 3 (To verify if the target is vulnerable with a new config file):
 USAGE 4 (To find 8.3 file names with a new config file):
  java -jar IIS_shortname_scanner.jar [ShowProgress] [ThreadNumbers] [URL] [configFile]
 
+USAGE 5 (To scan multiple targets using a linux box):
+ ./multi_targets.sh <scope file> <is_default_https (1=https)>
+ 
 DETAILS:
  [ShowProgress]: 0= Show final results only - 1= Show final results step by step  - 2= Show Progress
  [ThreadNumbers]: 0= No thread - Integer Number = Number of concurrent threads [be careful about IIS Denial of Service]
@@ -77,6 +81,9 @@ Examples:
 
 - Example 5 (using a new config file):
  java -jar IIS_shortname_scanner.jar 2 20 http://example.com/folder/ newconfig.xml 
+ 
+- Example 6 (scanning multiple targets using a linux box):
+ ./multi_targets.sh scope.txt 1
 ```
 
 Note 1: Edit config.xml file to change the scanner settings and add additional headers.

@@ -1,6 +1,7 @@
 import java.io.Console;
 import java.lang.reflect.Field;
 import java.net.*;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 import javax.net.ssl.*;
@@ -16,6 +17,7 @@ public class IIS_ShortName_Scanner {
 	/* Do not change the below lines if it's Greek to you!*/
 
 	private static boolean debugMode;
+	private static boolean hassleFree;
 	private static String customUserAgent;
 	private static String customCookie;
 	private static String additionalQuery;
@@ -35,7 +37,7 @@ public class IIS_ShortName_Scanner {
 	private static int acceptableDifferenceLengthBetweenResponses;
 	private static boolean onlyCheckForVulnerableSite = false;
 	private static String configFile = "config.xml";
-	private final static String strVersion = "2.3.3 - 13October2015";
+	private final static String strVersion = "2.3.4 (18 January 2016)";
 	public Set<String> finalResultsFiles = new TreeSet<String>();
 	public Set<String> finalResultsDirs = new TreeSet<String>();
 	private static String[] arrayScanList;
@@ -63,6 +65,8 @@ public class IIS_ShortName_Scanner {
 	private static String extStartsWith = "";
 	private static int maxNumericalPart = 10;
 	private static int forceNumericalPart = 1;
+	private static boolean showActualNames;
+	private static boolean isLastFolderIgnored = false;
 	
 	public static void main(String[] args) throws Exception {
 		// Get URL from input!
@@ -138,7 +142,7 @@ public class IIS_ShortName_Scanner {
 						// Only check for a vulnerable target
 						onlyCheckForVulnerableSite = true;
 						url = args[0];
-						showProgress = 2;
+						showProgress = 0;
 						concurrentThreads = 0;
 					}else{
 						// Full Scan Mode
@@ -162,6 +166,7 @@ public class IIS_ShortName_Scanner {
 					}
 				}
 				
+				
 				// Basic check for the URL
 				if(url.length()<8) throw new Exception("URL is too short!"); // URL is too short
 				if(url.indexOf("?")>0)
@@ -171,28 +176,34 @@ public class IIS_ShortName_Scanner {
 				if(!url.endsWith("/") && url.lastIndexOf("/")<8)
 					url += "/"; // add slash after the domain to the root dir
 				if(!url.endsWith("/"))
-					System.out.println("\r\nWARNING: URL does not end with a slash character (/) - last folder will be ignored!");
-				if(!url.toLowerCase().startsWith("http://") && !url.toLowerCase().startsWith("https://"))
-					System.out.println("WARNING: URL does not start with HTTP:// or HTTPS:// protocol - this may fail the scanner completely!");
-				System.out.println();
+					isLastFolderIgnored = true;
+					
 				
-				url = url.substring(0, url.lastIndexOf("/")+1);
-				if(url.length()<8) throw new Exception(); // URL is too short
 				
+				destURL = url;
+				
+				destURL = destURL.substring(0, destURL.lastIndexOf("/")+1);
+				
+				if(destURL.length()<8) throw new Exception(); // URL is too short
+				
+				// show some outputs
+				if (showProgress > 0){
+					System.out.println("-- Current Configuration -- Begin");
+					System.out.println("Scan Mode: " + showProgress);
+					System.out.println("Number of threads: " + concurrentThreads);
+					System.out.println("Config file: " + configFile);
+					System.out.println("Scanner version: " + strVersion);
+				}
 				// Load the config file
-				System.out.println("-- Current Configuration -- Begin");
-				System.out.println("Target: " + url);
-				System.out.println("Scan Mode: " + showProgress);
-				System.out.println("Number of threads: " + concurrentThreads);
-				System.out.println("Config file: " + configFile);
-				System.out.println("Scanner version: " + strVersion);
 				loadConfig();
-				System.out.println("-- Current Configuration -- End");
-
+				// show some outputs
+				if (showProgress > 0){
+					System.out.println("-- Current Configuration -- End");
+				}
 				arrayScanList = scanList.split("");
 
 				// Delay after each request
-				if(maxDelayAfterEachRequest==0){
+				if(maxDelayAfterEachRequest==0 && !hassleFree){
 					String delayMilliseconds = "0";
 					if(console!=null){
 						delayMilliseconds = console.readLine("How much delay do you want after each request in milliseconds [default=0]? ");
@@ -204,11 +215,13 @@ public class IIS_ShortName_Scanner {
 						}
 					}
 				}
-				System.out.println("Max delay after each request in milliseconds = " + String.valueOf(maxDelayAfterEachRequest));
+				
+				if(showProgress>0)
+					System.out.println("Max delay after each request in milliseconds = " + String.valueOf(maxDelayAfterEachRequest));
 
 				// Proxy server setting
 				String hasProxy = "No";
-				if(proxyServerName=="" || proxyServerPort ==0){
+				if((proxyServerName=="" || proxyServerPort ==0)  && !hassleFree){
 					if(console!=null){
 						hasProxy = console.readLine("Do you want to use proxy [Y=Yes, Anything Else=No]? ");
 						if(hasProxy.toLowerCase().equals("y")||hasProxy.toLowerCase().equals("yes")){
@@ -230,17 +243,20 @@ public class IIS_ShortName_Scanner {
 						}
 					}
 				}
-
-				if(!proxyServerName.equals(""))
-					System.out.println("\rProxy Server:"+proxyServerName+":"+String.valueOf(proxyServerPort)+"\r\n");
-				else
-					System.out.println("\rNo proxy has been used.\r\n");
-
+				if(showProgress>0){
+					if(!proxyServerName.equals(""))
+						System.out.println("\rProxy Server:"+proxyServerName+":"+String.valueOf(proxyServerPort)+"\r\n");
+					else
+						System.out.println("\rNo proxy has been used.\r\n");
+				}
 				// Beginning...
 				Date start_date = new Date();
-				System.out.println("\rScanning...\r\n");
+				
+				if(showProgress>0)
+					System.out.println("\rScanning...\r\n");
+
 				// Start scanning ...
-				obj.doScan(url);
+				obj.doScan();
 				Date end_date = new Date();
 				long l1 = start_date.getTime();
 				long l2 = end_date.getTime();
@@ -248,7 +264,8 @@ public class IIS_ShortName_Scanner {
 
 
 				// ...Finished
-				System.out.println("\r\n\rFinished in: " + difference / 1000 + " second(s)");
+				if(showProgress>0)
+					System.out.println("\r\n\rFinished in: " + difference / 1000 + " second(s)");
 				
 				if(console!=null && args.length==0){
 					// pause for output
@@ -295,6 +312,13 @@ public class IIS_ShortName_Scanner {
 						debugMode = Boolean.parseBoolean(properties.getProperty(key));
 					}catch(Exception e){
 						debugMode = false;
+					}
+					break;
+				case "hasslefree":
+					try{
+						hassleFree = Boolean.parseBoolean(properties.getProperty(key));
+					}catch(Exception e){
+						hassleFree = true;
 					}
 					break;
 				case "useragent":
@@ -397,11 +421,19 @@ public class IIS_ShortName_Scanner {
 					forceNumericalPart = Integer.parseInt(properties.getProperty(key,"1"));
 					if(forceNumericalPart<1) forceNumericalPart = 1; // set to minimum
 					break;
+				case "showactualnames":
+					try{
+						showActualNames = Boolean.parseBoolean(properties.getProperty(key));
+					}catch(Exception e){
+						showActualNames = true;
+					}
+					break;
 				default:
 					System.out.println("Unknown item in config file: " + key);
 				}
 				if(value=="") value = "Default";
-				System.out.println(key + ": " + value);
+				if(showProgress>0)
+					System.out.println(key + ": " + value);
 			}
 
 			additionalHeaders = additionalHeadersString.split(additionalHeadersDelimiter);
@@ -460,8 +492,7 @@ public class IIS_ShortName_Scanner {
 		System.out.println(String.valueOf(delim));
 	}
 
-	private void doScan(String url) throws Exception {
-		destURL = url;
+	private void doScan() throws Exception {
 		magicFileName = magicFileName.replace("*", asteriskSymbol);
 		magicFileExtension = magicFileExtension.replace("*", asteriskSymbol);
 
@@ -475,15 +506,14 @@ public class IIS_ShortName_Scanner {
 			for(String s2:requestMethod){
 				magicFinalPart = s1;
 				reliableRequestMethod = s2;
-				System.out.println("Testing request method: \"" + s2 + "\" with magic part: \""+ s1 + "\" ...");
+				if(showProgress>0)
+					System.out.println("Testing request method: \"" + s2 + "\" with magic part: \""+ s1 + "\" ...");
+				
+				 
 				isReliableResult = isReliable();
 				if (isReliableResult) {
-					System.out.println("Reliable request method was found = " + s2);
-					System.out.println("Reliable magic part was found = " + s1);
 					if(onlyCheckForVulnerableSite){
-						System.out.println(getReqCounter() + " requests have been sent to the server:");
-						System.out.println("\r\n<<< The target website is vulnerable! >>>");
-						return;
+						break;
 					}else{
 						boolIsQuestionMarkReliable = isQuestionMarkReliable();
 						if (concurrentThreads == 0) {
@@ -501,17 +531,58 @@ public class IIS_ShortName_Scanner {
 			if (isReliableResult) break;
 		}
 
-		if(!isReliableResult)
-			System.err.println("Cannot get proper/different error messages from the server. Check the inputs and try again.");
-
 		while (threadCounter != 0) {
 			Thread.sleep(1);
 		}
 		threadPool.join();
-		System.out.println("\r\n\r\n--------- Final Result ---------");
-		System.out.println(getReqCounter() + " requests have been sent to the server:");
+		System.out.println("# IIS Short Name (8.3) Scanner version " + strVersion + " - scan initiated " + (new SimpleDateFormat("yyyy/MM/dd HH:mm:ss")).format(new Date()));
+		System.out.println("Target: " + destURL);
+		if(!isReliableResult)
+			System.err.println("|_ Result: Not vulnerable or no item was found. It was not possible to get proper/different error messages from the server. Check the inputs and try again.");
+		else{
+			System.out.println("|_ Result: Vulnerable!");
+			System.out.println("|_ Used HTTP method: " + reliableRequestMethod + " \r\n|_ Suffix (magic part): "+ magicFinalPart + "");
+		}
+		
+		// Warnings
+		List<String> warningStrings = new ArrayList<String>();
+		if(isLastFolderIgnored)
+			warningStrings.add("URL does not end with a slash character (/) - last folder was ignored!");
+		if(!destURL.toLowerCase().startsWith("http://") && !destURL.toLowerCase().startsWith("https://"))
+			warningStrings.add("URL does not start with HTTP:// or HTTPS:// protocol - this may fail the scanner completely!");
+		// Only shows more warnings when we are trying to get files/folders as well
+		if(!onlyCheckForVulnerableSite){
+			// Show message for boolIsQuestionMarkReliable
+			if(!boolIsQuestionMarkReliable){
+				warningStrings.add("Question mark character was blocked: you may have a lot of false positives. -> manual check is needed.");
+			}
+			// Show message for boolIsExtensionReliable
+			if(!boolIsExtensionReliable){
+				warningStrings.add("File extensions could not be verified. you may have false positive results. -> manual check is needed.");
+			}
+			
+			// Show message when there was network error
+			if(!boolIsNetworkReliable){
+				warningStrings.add("Some network problems were detected and the results can be unreliable. Please try again with less threads.");
+			}
+		}
+		if (warningStrings.size()>0){
+			
+			System.out.println("|_ Warning(s):"); 
+			for(String strWarning:warningStrings){
+				System.out.println("  |_ "+strWarning);
+			}
+		}
+		
+		
+		//System.out.println("\r\n\r\n--------- Final Result ---------");
+		System.out.println("|_ Extra information:");
+		
+		//System.out.println(getReqCounter() + " requests have been sent to the server:");
+		System.out.println("  |_ Number of sent requests: " + getReqCounter());
 		if (!finalResultsDirs.isEmpty() || !finalResultsFiles.isEmpty()) {
 			String additionalData = "";
+			System.out.println("  |_ Indentified directories: " + finalResultsDirs.size());
 			for (String s : finalResultsDirs) {
 				additionalData = "";
 				String currentName = s;
@@ -520,20 +591,22 @@ public class IIS_ShortName_Scanner {
 					currentName = s.substring(0, s.lastIndexOf("."));
 					currentExt = s.substring(s.lastIndexOf("."));
 				}
-				if  (currentName.lastIndexOf("~") < 6){
-					if  (currentName.lastIndexOf("~") == 5 && s.matches(".*(\\w\\d|\\d\\w).*")){
-						additionalData = " -- Possible directory name = " + s.substring(0,currentName.lastIndexOf("~"));
-					}else{
-						additionalData = " -- Actual directory name = " + s.substring(0,currentName.lastIndexOf("~"));
+				if(showActualNames){
+					if  (currentName.lastIndexOf("~") < 6){
+						if  (currentName.lastIndexOf("~") == 5 && s.matches(".*(\\w\\d|\\d\\w).*")){
+							additionalData = "\r\n      |_ Possible directory name = " + s.substring(0,currentName.lastIndexOf("~"));
+						}else{
+							additionalData = "\r\n      |_ Actual directory name = " + s.substring(0,currentName.lastIndexOf("~"));
+						}
 					}
+					if  (s.length() - s.lastIndexOf(".") <= 3)
+						additionalData += "\r\n      |_ Actual extension = " + currentExt;
 				}
-				if  (s.length() - s.lastIndexOf(".") <= 3)
-					additionalData += " -- Actual extension = " + currentExt;
-
-				System.out.println("Dir: " + s + additionalData);
+				System.out.println("    |_ " + s + additionalData);
 
 			}
-
+			
+			System.out.println("  |_ Indentified files: " + finalResultsFiles.size());
 			for (String s : finalResultsFiles) {
 				additionalData = "";
 				String currentName = s;
@@ -542,37 +615,24 @@ public class IIS_ShortName_Scanner {
 					currentName = s.substring(0, s.lastIndexOf("."));
 					currentExt = s.substring(s.lastIndexOf("."));
 				}
-				if  (currentName.lastIndexOf("~") < 6){	
-					if  (currentName.lastIndexOf("~") == 5 && s.matches(".*(\\w\\d|\\d\\w).*")){
-						additionalData = " -- Possible file name = " + s.substring(0,currentName.lastIndexOf("~"));
-					}else{
-						additionalData = " -- Actual file name = " + s.substring(0,currentName.lastIndexOf("~"));
+				if(showActualNames){
+					if  (currentName.lastIndexOf("~") < 6){	
+						if  (currentName.lastIndexOf("~") == 5 && s.matches("^[a-fA-F0-9]{5}.*")){
+							additionalData = "\r\n      |_ Possible file name = " + s.substring(0,currentName.lastIndexOf("~"));
+						}else{
+							additionalData = "\r\n      |_ Actual file name = " + s.substring(0,currentName.lastIndexOf("~"));
+						}
 					}
+					if  (s.length() - s.lastIndexOf(".") <= 3)
+						additionalData += "\r\n      |_ Actual extension = " + currentExt;
 				}
-				if  (s.length() - s.lastIndexOf(".") <= 3)
-					additionalData += " -- Actual extension = " + currentExt;
-				System.out.println("File: " + s + additionalData);
+				System.out.println("    |_ " + s + additionalData);
 			}
 		}
 
-		System.out.println();
-		System.out.println(finalResultsDirs.size() + " Dir(s) was/were found");
-		System.out.println(finalResultsFiles.size() + " File(s) was/were found\r\n");
-
-		// Show message for boolIsQuestionMarkReliable
-		if(!boolIsQuestionMarkReliable){
-			System.out.println("Question mark character was blocked: you may have a lot of false positives. -> manual check is needed.");
-		}
-		// Show message for boolIsExtensionReliable
-		if(!boolIsExtensionReliable){
-			System.out.println("File extensions could not be verified. you may have false positive results. -> manual check is needed.");
-		}
-		
-		// Show message when there was network error
-		if(!boolIsNetworkReliable){
-			System.out.println("Some network problems were detected and the results can be unreliable. Please try again with less threads.");
-		}
-
+		//System.out.println(finalResultsDirs.size() + " Dir(s) was/were found");
+		//System.out.println(finalResultsFiles.size() + " File(s) was/were found\r\n");
+	
 	}
 
 	private void scanListPurifier() {

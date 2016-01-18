@@ -5,6 +5,10 @@
 	
 	<entry key="debug">false</entry>
 	
+	<!-- It will not ask any questions even when proxy / time delay are not configured - it will ignore them. It is useful for automation -->
+	<entry key="hassleFree">true</entry>
+	
+	<!-- You can change the user-agent if it is needed -->
 	<entry key="userAgent"><![CDATA[Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/534.10 (KHTML, like Gecko) Chrome/8.0.552.215 Safari/534.10]]></entry>
 	
 	<!-- Your cookie information. Can be a hidden value that will pass your WAF. -->
@@ -72,5 +76,8 @@
 	<!-- This parameter automatically override the "maxNumericalPart" paremeter when "forceNumericalPart > maxNumericalPart" -->
 	<!-- The minimum value for this parameter is 1 -->
 	<entry key="forceNumericalPart">3</entry>
+	
+	<!-- This will be used to show the potential/actual names in final results if possible -->
+	<entry key="showActualNames">true</entry>
 	
 </properties>
