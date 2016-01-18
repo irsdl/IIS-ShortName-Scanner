@@ -23,7 +23,7 @@ It is not easy to find the original file or folder names based on the short name
 Installation
 --------------
 It has been compiled by using JDK 7. You only need to download the following files if you do not want to build this yourself:
-- IIS_shortname_scanner.jar
+- iis_shortname_scanner.jar
 - config.xml
 - run.bat
 - multi_targets.sh
@@ -39,19 +39,19 @@ Usage
 ### Command line options
 
 USAGE 1 (To verify if the target is vulnerable with the default config file):
- java -jar IIS_shortname_scanner.jar [URL]
+ java -jar iis_shortname_scanner.jar [URL]
 
 
 USAGE 2 (To find 8.3 file names with the default config file):
- java -jar IIS_shortname_scanner.jar [ShowProgress] [ThreadNumbers] [URL]
+ java -jar iis_shortname_scanner.jar [ShowProgress] [ThreadNumbers] [URL]
 
 
 USAGE 3 (To verify if the target is vulnerable with a new config file):
- java -jar IIS_shortname_scanner.jar [URL] [configFile]
+ java -jar iis_shortname_scanner.jar [URL] [configFile]
 
 
 USAGE 4 (To find 8.3 file names with a new config file):
- java -jar IIS_shortname_scanner.jar [ShowProgress] [ThreadNumbers] [URL] [configFile]
+ java -jar iis_shortname_scanner.jar [ShowProgress] [ThreadNumbers] [URL] [configFile]
 
 USAGE 5 (To scan multiple targets using a linux box):
  ./multi_targets.sh <scope file> <is_default_https (1=https)>
@@ -65,22 +65,22 @@ DETAILS:
 Examples:
 ```
 - Example 0 (to see if the target is vulnerable):
- java -jar IIS_shortname_scanner.jar http://example.com/folder/
+ java -jar iis_shortname_scanner.jar http://example.com/folder/
 
 - Example 1 (uses no thread - very slow):
- java -jar IIS_shortname_scanner.jar 2 0 http://example.com/folder/new%20folder/
+ java -jar iis_shortname_scanner.jar 2 0 http://example.com/folder/new%20folder/
 
 - Example 2 (uses 20 threads - recommended):
- java -jar IIS_shortname_scanner.jar 2 20 http://example.com/folder/new%20folder/
+ java -jar iis_shortname_scanner.jar 2 20 http://example.com/folder/new%20folder/
 
 - Example 3 (saves output in a text file):
- java -jar IIS_shortname_scanner.jar 0 20 http://example.com/folder/new%20folder/ > c:\results.txt
+ java -jar iis_shortname_scanner.jar 0 20 http://example.com/folder/new%20folder/ > c:\results.txt
 
 - Example 4 (bypasses IIS basic authentication):
- java -jar IIS_shortname_scanner.jar 2 20 http://example.com/folder/AuthNeeded:$I30:$Index_Allocation/
+ java -jar iis_shortname_scanner.jar 2 20 http://example.com/folder/AuthNeeded:$I30:$Index_Allocation/
 
 - Example 5 (using a new config file):
- java -jar IIS_shortname_scanner.jar 2 20 http://example.com/folder/ newconfig.xml 
+ java -jar iis_shortname_scanner.jar 2 20 http://example.com/folder/ newconfig.xml 
  
 - Example 6 (scanning multiple targets using a linux box):
  ./multi_targets.sh scope.txt 1
