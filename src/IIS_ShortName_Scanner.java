@@ -37,7 +37,7 @@ public class IIS_ShortName_Scanner {
 	private static int acceptableDifferenceLengthBetweenResponses;
 	private static boolean onlyCheckForVulnerableSite = false;
 	private static String configFile = "config.xml";
-	private final static String strVersion = "2.3.4 (18 January 2016)";
+	private final static String strVersion = "2.3.5 (19 January 2016)";
 	public Set<String> finalResultsFiles = new TreeSet<String>();
 	public Set<String> finalResultsDirs = new TreeSet<String>();
 	private static String[] arrayScanList;
@@ -1184,6 +1184,10 @@ public class IIS_ShortName_Scanner {
 				String tempInvalidStatus7 = HTTPReqResponse("/" + new String(new char[10]).replace("\0", questionMarkSymbol) + "~1" + asteriskSymbol + magicFinalPart, 0); // Invalid name contains question mark symbol with no extension
 				//int tempInvalidStatus5Length = tempInvalidStatus3.length();
 				invalidStatus.add(tempInvalidStatus7);
+				
+				String tempInvalidStatus8 = HTTPReqResponse("/1234567890~1.1234" + magicFinalPart, 0); // Invalid name with no special characters
+				//int tempInvalidStatus5Length = tempInvalidStatus3.length();
+				invalidStatus.add(tempInvalidStatus8);
 				
 				
 				// If two different invalid requests lead to different responses, we cannot rely on them unless their length difference is negligible!

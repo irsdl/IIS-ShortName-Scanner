@@ -34,8 +34,8 @@
 	<entry key="proxyServerName"></entry>
 	<entry key="proxyServerPort"></entry>
 	
-	<!-- Delay after each request in milliseconds -->
-	<entry key="maxDelayAfterEachRequest">0</entry>
+	<!-- Delay after each request in milliseconds - 0 may cause false positive results -->
+	<entry key="maxDelayAfterEachRequest">1</entry>
 	
 	<entry key="magicFinalPartDelimiter">,</entry>
 	<entry key="magicFinalPartList"><![CDATA[\a.aspx,\a.asp,/a.aspx,/a.asp,/a.shtml,/a.asmx,/a.ashx,/a.config,/a.php,/a.jpg,/webresource.axd,/a.xxx]]></entry>
@@ -69,13 +69,14 @@
 	
 	<!-- This will be used to set a maximum value on the "NUMBER_HERE" parameter in FILENAME~NUMBER_HERE (example: DEFAUL~2.ASP) -->
 	<!-- The minimum value for this parameter is 1 -->
-	<entry key="maxNumericalPart">10</entry>
+	<entry key="maxNumericalPart">3</entry>
 	
 	<!-- This will be used to set a maximum value on the "NUMBER_HERE" parameter in FILENAME~NUMBER_HERE even when the previous number is not available -->
 	<!-- For instance, if it is set to 3, when we have DEFAUL~1.ASP and we do not have DEFAULT~2.ASP, it still checks DEFAUL~3.asp -->
-	<!-- This parameter automatically override the "maxNumericalPart" paremeter when "forceNumericalPart > maxNumericalPart" -->
+	<!-- This parameter automatically override the "maxNumericalPart" parameter when "forceNumericalPart > maxNumericalPart" -->
 	<!-- The minimum value for this parameter is 1 -->
-	<entry key="forceNumericalPart">3</entry>
+	<!-- Anything greater than 1 may lead to false positive results -->
+	<entry key="forceNumericalPart">1</entry>
 	
 	<!-- This will be used to show the potential/actual names in final results if possible -->
 	<entry key="showActualNames">true</entry>
