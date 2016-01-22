@@ -3,7 +3,12 @@
 <properties>
 	<comment>IIS Short File/Folder Name (8.3) Scanner - Configuration File</comment>
 	
+	<!-- To enabled maximum verbose messages -->
 	<entry key="debug">false</entry>
+	
+	<!-- To save all outputs in a file -->
+	<entry key="saveOutput">false</entry>
+	<entry key="outputFile">iis_shortname_scanner_logfile.txt</entry>
 	
 	<!-- It will not ask any questions even when proxy / time delay are not configured - it will ignore them. It is useful for automation -->
 	<entry key="hassleFree">true</entry>

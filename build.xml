@@ -5,7 +5,7 @@
 	<target name="CreateJar" description="Create Jar file">
 		<jar destfile="${projectHome}/iis_shortname_scanner.jar" basedir="${projectHome}/bin">
 			<manifest>
-			        <attribute name="Main-Class" value="IIS_ShortName_Scanner"/>
+			        <attribute name="Main-Class" value="IISShortNameScanner.IIS_ShortName_Scanner"/>
 			        <attribute name="Ant-Version" value="${ant.version}"/> 
 			        <attribute name="Created-By" value="JDK ${java.version} (${java.vendor})"/>			
 			 </manifest>
