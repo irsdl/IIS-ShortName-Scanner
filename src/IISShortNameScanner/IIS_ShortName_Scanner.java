@@ -1680,7 +1680,7 @@ public class IIS_ShortName_Scanner {
 		if(outputType.equals(OutputType.ERROR) && (debugMode || isShowProgressModeAllowed) ){
 			System.err.println(output);
 			if(saveOutput){
-				//saveOutputsInFile(output);
+				saveOutputsInFile(output);
 			}
 		}else if((isShowProgressModeAllowed && outputType.equals(OutputType.NORMAL) || (outputType.equals(OutputType.DEBUG) && debugMode))){
 			System.out.println(output);
