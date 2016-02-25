@@ -46,7 +46,7 @@ public class IIS_ShortName_Scanner {
 	private static int acceptableDifferenceLengthBetweenResponses;
 	private static boolean onlyCheckForVulnerableSite = false;
 	private static String configFile = "config.xml";
-	private final static String strVersion = "2.3.7 (25 February 2016)";
+	private final static String strVersion = "2.3.8 (25 February 2016)";
 	public Set<String> finalResultsFiles = new TreeSet<String>();
 	public Set<String> finalResultsDirs = new TreeSet<String>();
 	private static String[] arrayScanList;
@@ -1188,7 +1188,7 @@ public class IIS_ShortName_Scanner {
 			validStatus = HTTPReqResponse("/" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
 			int validStatusLength = validStatus.length();
 			String tempInvalidStatus1;
-			tempInvalidStatus1 = HTTPReqResponse("/1234567890" + asteriskSymbol + "~1." + asteriskSymbol + magicFinalPart, 0); // Invalid name
+			tempInvalidStatus1 = HTTPReqResponse("/1234567890" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0); // Invalid name
 			int invalidStatus1Length = tempInvalidStatus1.length();
 			
 			
