@@ -46,7 +46,7 @@ public class IIS_ShortName_Scanner {
 	private static int acceptableDifferenceLengthBetweenResponses;
 	private static boolean onlyCheckForVulnerableSite = false;
 	private static String configFile = "config.xml";
-	private final static String strVersion = "2.3.6 (22 January 2016)";
+	private final static String strVersion = "2.3.7 (25 February 2016)";
 	public Set<String> finalResultsFiles = new TreeSet<String>();
 	public Set<String> finalResultsDirs = new TreeSet<String>();
 	private static String[] arrayScanList;
@@ -1456,13 +1456,15 @@ public class IIS_ShortName_Scanner {
 			} else {
 				finalResponse = content.toString();
 				finalResponse = finalResponse.toLowerCase();
-				finalResponse = finalResponse.replaceAll("\\\\", "/");
-				strAddition = strAddition.replaceAll("\\\\", "/");
+				finalResponse = finalResponse.replaceAll("(?im)([\\\\])", "/").replaceAll("(?im)&amp;", "&").replaceAll("(?im)([\\(\\)\\.\\*\\?])", "");
+				strAddition += "/" + urlEncodedStrAddition + "/" + additionalQuery; // to remove incoming data + even url encoded format
+				strAddition = strAddition.replaceAll("(?im)([\\\\])", "/").replaceAll("(?im)&amp;", "&").replaceAll("(?im)([\\(\\)\\.\\*\\?])", "");
 				strAddition = strAddition.toLowerCase();
 				String[] temp = strAddition.split("/");
 				for (int i = 0; i < temp.length; i++) {
 					if (temp[i].length() > 0) {
 						while (finalResponse.indexOf(temp[i]) > 0) {
+							finalResponse = finalResponse.replaceAll("(?im)(\\<[^>]+[a-z0-9\\-]=['\"`]([^\"]*"+temp[i]+"[^\"]*)['\"`][^>]*>)", ""); // to remove a tag when it includes dynamic contents
 							finalResponse = finalResponse.replace(temp[i], "");
 						}
 					}
@@ -1671,9 +1673,14 @@ public class IIS_ShortName_Scanner {
 		// If the incoming ShowProgressMode is set to ALL, we need to ensure our current ShowProgressMode is also set to ALL
 		Boolean isShowProgressModeAllowed = false;
 		
-		if(currentShowProgressMode.equals(showProgressMode) || (showProgressMode.equals(ShowProgressMode.PARTIALRESULT) && currentShowProgressMode.equals(ShowProgressMode.ALL)) ||
-				showProgressMode.equals(ShowProgressMode.FINALRESULT))
-			isShowProgressModeAllowed = true;
+		if(currentShowProgressMode!=null){
+			if(currentShowProgressMode.equals(showProgressMode) || (showProgressMode.equals(ShowProgressMode.PARTIALRESULT) && currentShowProgressMode.equals(ShowProgressMode.ALL)) ||
+					showProgressMode.equals(ShowProgressMode.FINALRESULT))
+				isShowProgressModeAllowed = true;
+		}else{
+			if(showProgressMode.equals(ShowProgressMode.FINALRESULT))
+				isShowProgressModeAllowed = true;
+		}
 		// There is kind of a logical OR between outputType & isShowProgressModeAllowed ... e.g.: when isShowProgressModeAllowed is set to FALSE and outputType to DEBUG when debugMode is TRUE
 		
 		// Printing errors when isShowProgressModeAllowed=true or when we are in debug mode

@@ -1,4 +1,4 @@
-IIS Short Name Scanner v2.3.6
+IIS Short Name Scanner v2.3.7
 =====================
 The latest version of scanner for IIS short file name (8.3) disclosure vulnerability by using the tilde (~) character.
 
@@ -10,7 +10,7 @@ This scanner was moved from https://code.google.com/p/iis-shortname-scanner-poc/
 
 Original research file: http://soroush.secproject.com/downloadable/microsoft_iis_tilde_character_vulnerability_feature.pdf
 
-It is possible to detect short names of files and directories which have an 8.3 equivalent in Windows by using some vectors in several versions of Microsoft IIS. For instance, it is possible to detect all short-names of “.aspx” files as they have 4 letters in their extensions.
+It is possible to detect short names of files and directories which have an 8.3 equivalent in Windows by using some vectors in several versions of Microsoft IIS. For instance, it is possible to detect all short-names of ".aspx" files as they have 4 letters in their extensions.
 
 Note: new techniques have been introduced to the latest versions of this scanner and it can now scan IIS8.5 when it is vulnerable. 
 
