@@ -605,7 +605,7 @@ public class IIS_ShortName_Scanner {
 		showOutputsTree("Number of sent requests: " + getReqCounter(),1);
 		if (!finalResultsDirs.isEmpty() || !finalResultsFiles.isEmpty()) {
 			
-			showOutputsTree("Indentified directories: " + finalResultsDirs.size(),1);
+			showOutputsTree("Identified directories: " + finalResultsDirs.size(),1);
 			for (String s : finalResultsDirs) {
 				String currentName = s;
 				showOutputsTree(s,2);
@@ -629,7 +629,7 @@ public class IIS_ShortName_Scanner {
 
 			}
 			
-			showOutputsTree("Indentified files: " + finalResultsFiles.size(), 1);
+			showOutputsTree("Identified files: " + finalResultsFiles.size(), 1);
 			for (String s : finalResultsFiles) {
 				String currentName = s;
 				showOutputsTree(s, 2);
