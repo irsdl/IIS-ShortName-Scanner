@@ -46,7 +46,7 @@ public class IIS_ShortName_Scanner {
 	private static int acceptableDifferenceLengthBetweenResponses;
 	private static boolean onlyCheckForVulnerableSite = false;
 	private static String configFile = "config.xml";
-	private final static String strVersion = "2.3.8 (25 February 2016)";
+	private final static String strVersion = "2.3.9 (05 February 2017)";
 	public Set<String> finalResultsFiles = new TreeSet<String>();
 	public Set<String> finalResultsDirs = new TreeSet<String>();
 	private static String[] arrayScanList;
@@ -76,6 +76,7 @@ public class IIS_ShortName_Scanner {
 	private static int forceNumericalPart = 1;
 	private static boolean showActualNames;
 	private static boolean isLastFolderIgnored = false;
+	private static boolean useProvidedURLWithoutChange;
 	
 	
 	public static void main(String[] args) throws Exception {
@@ -176,23 +177,27 @@ public class IIS_ShortName_Scanner {
 					}
 				}
 				
+				// Load the config file
+				loadConfig();
 				
 				// Basic check for the URL
 				if(url.length()<8) throw new Exception("URL is too short!"); // URL is too short
-				if(url.indexOf("?")>0)
-					url = url.substring(0, url.indexOf("?"));
-				if(url.indexOf(";")>0)
-					url = url.substring(0, url.indexOf(";"));
-				if(!url.endsWith("/") && url.lastIndexOf("/")<8)
-					url += "/"; // add slash after the domain to the root dir
-				if(!url.endsWith("/"))
-					isLastFolderIgnored = true;
-					
+				if(!useProvidedURLWithoutChange){
+					if(url.indexOf("?")>0)
+						url = url.substring(0, url.indexOf("?"));
+					if(url.indexOf(";")>0)
+						url = url.substring(0, url.indexOf(";"));
+					if(!url.endsWith("/") && url.lastIndexOf("/")<8)
+						url += "/"; // add slash after the domain to the root dir
+					if(!url.endsWith("/"))
+						isLastFolderIgnored = true;
+				}
 				
 				
 				destURL = url;
 				
-				destURL = destURL.substring(0, destURL.lastIndexOf("/")+1);
+				if(!useProvidedURLWithoutChange)
+					destURL = destURL.substring(0, destURL.lastIndexOf("/")+1);
 				
 				if(destURL.length()<8) throw new Exception(); // URL is too short
 				
@@ -203,9 +208,7 @@ public class IIS_ShortName_Scanner {
 				showOutputs("Config file: " + configFile, ShowProgressMode.PARTIALRESULT);
 				showOutputs("Scanner version: " + strVersion, ShowProgressMode.PARTIALRESULT);
 
-				// Load the config file
-				loadConfig();
-				
+								
 				// show some outputs
 				showOutputs("-- Current Configuration -- End", ShowProgressMode.PARTIALRESULT);
 
@@ -356,7 +359,7 @@ public class IIS_ShortName_Scanner {
 					additionalHeadersString = properties.getProperty(key,"X-Forwarded-For: 127.0.0.1@@X-Originating-IP: 127.0.0.1@@X-Cluster-Client-Ip: 127.0.0.1");
 					break;
 				case "urlsuffix":
-					additionalQuery = properties.getProperty(key,"?&aspxerrorpath=/");
+					additionalQuery = properties.getProperty(key,"?aspxerrorpath=/&aspxerrorpath=/");
 					break;
 				case "inscopecharacters":
 					scanList = properties.getProperty(key,"ETAONRISHDLFCMUGYPWBVKJXQZ0123456789!#$%&'()-@^_`{}~");
@@ -449,6 +452,14 @@ public class IIS_ShortName_Scanner {
 					}catch(Exception e){
 						showActualNames = true;
 					}
+					break;
+				case "useprovidedurlwithoutchange":
+					try{
+						useProvidedURLWithoutChange = Boolean.parseBoolean(properties.getProperty(key));
+					}catch(Exception e){
+						useProvidedURLWithoutChange = false;
+					}
+					
 					break;
 				default:
 					showOutputs("Unknown item in config file: " + key);
@@ -629,7 +640,7 @@ public class IIS_ShortName_Scanner {
 
 			}
 			
-			showOutputsTree("Identified files: " + finalResultsFiles.size(), 1);
+			showOutputsTree("Indentified files: " + finalResultsFiles.size(), 1);
 			for (String s : finalResultsFiles) {
 				String currentName = s;
 				showOutputsTree(s, 2);

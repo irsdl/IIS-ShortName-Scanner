@@ -86,4 +86,6 @@
 	<!-- This will be used to show the potential/actual names in final results if possible -->
 	<entry key="showActualNames">true</entry>
 	
+	<!-- This can be used in special situations such as when the target is accessible via SSRF e.g. http://proxyweb/proxy?url=http://targetIIS/ -->
+	<entry key="useProvidedURLWithoutChange">false</entry>
 </properties>
