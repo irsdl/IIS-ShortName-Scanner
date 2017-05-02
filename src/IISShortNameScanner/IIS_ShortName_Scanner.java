@@ -640,7 +640,7 @@ public class IIS_ShortName_Scanner {
 
 			}
 			
-			showOutputsTree("Indentified files: " + finalResultsFiles.size(), 1);
+			showOutputsTree("Identified files: " + finalResultsFiles.size(), 1);
 			for (String s : finalResultsFiles) {
 				String currentName = s;
 				showOutputsTree(s, 2);
