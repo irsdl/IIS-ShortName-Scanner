@@ -37,7 +37,7 @@ while read target; do
             # the input is whitespace!
             myhostname=""
         else
-            myhostname=`python -c "from urlparse import urlparse;url = urlparse('$target','$default_scheme');print url.scheme+'://'+url.netloc+url.path"`
+            myhostname=`python3 -c "from urllib.parse import urlparse;url = urlparse('$target','$default_scheme');print(url.scheme+'://'+url.netloc+url.path)"`
             if [ -z "$myhostname" ]; then
                     # when target is not a url (ip address for example), python variable will be empty
                     myhostname="$target"
