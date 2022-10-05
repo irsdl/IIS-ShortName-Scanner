@@ -23,7 +23,7 @@ It is not easy to find the original file or folder names based on the short name
 Installation
 --------------
 The recent version has been compiled by using Open JDK 17 (an old jar fail for JDK7 is also available). 
-You will need to download files in the [/release] directory to use this old application!
+You will need to download files in the [/release](https://github.com/irsdl/IIS-ShortName-Scanner/tree/master/release) directory to use this old application!
 
 You can also compile this application yourself. Please submit any issues in GitHub for further investigation.
 It should be straight forward to open this project in Eclipse as well.
