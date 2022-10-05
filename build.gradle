@@ -1,0 +1,46 @@
+apply plugin: 'java-library'
+apply plugin: 'maven-publish'
+
+group 'com.irsdl'
+version ''
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://jitpack.io"
+    }
+}
+
+dependencies {
+
+}
+
+jar{
+    archivesBaseName = "iis_shortname_scanner"
+    manifest {
+        attributes 'Implementation-Title': 'Gradle Quickstart',
+                'Implementation-Version': version,
+                'Main-Class': 'iisShortNameScanner.IISShortNameScannerTool'
+    }
+    from {
+        (configurations.runtimeClasspath).collect { it.isDirectory() ? it : zipTree(it) }
+    }{
+        exclude "META-INF/*.SF"
+        exclude "META-INF/*.DSA"
+        exclude "META-INF/*.RSA"
+        exclude "META-INF/*.txt"
+    }
+}
+
+tasks.withType(Jar) {
+    destinationDirectory = file("$rootDir/build/compiled")
+}
+
+task copyJarForArchivingTask(type: Copy) {
+        dependsOn(jar)
+        from layout.buildDirectory.dir("$rootDir/build/compiled")
+        include "*.jar"
+        into layout.buildDirectory.dir("$rootDir/release")
+}
+
+build.dependsOn copyJarForArchivingTask

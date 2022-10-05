@@ -1,4 +1,4 @@
-IIS Short Name Scanner v2.3.9
+IIS Short Name Scanner
 =====================
 The latest version of scanner for IIS short file name (8.3) disclosure vulnerability by using the tilde (~) character.
 
@@ -22,13 +22,8 @@ It is not easy to find the original file or folder names based on the short name
 
 Installation
 --------------
-It has been compiled by using JDK 7. You only need to download the following files if you do not want to build this yourself:
-- iis_shortname_scanner.jar
-- config.xml
-- run.bat
-- multi_targets.sh
-
-Remember to use Java v7.
+The recent version has been compiled by using Open JDK 17 (an old jar fail for JDK7 is also available). 
+You will need to download files in the [/release] directory to use this old application!
 
 You can also compile this application yourself. Please submit any issues in GitHub for further investigation.
 It should be straight forward to open this project in Eclipse as well.
@@ -39,48 +34,57 @@ Usage
 ### Command line options
 
 USAGE 1 (To verify if the target is vulnerable with the default config file):
- java -jar iis_shortname_scanner.jar [URL]
-
+```
+java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED  -jar iis_shortname_scanner.jar [URL]
+```
 
 USAGE 2 (To find 8.3 file names with the default config file):
- java -jar iis_shortname_scanner.jar [ShowProgress] [ThreadNumbers] [URL]
-
+```
+java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar [ShowProgress] [ThreadNumbers] [URL]
+```
 
 USAGE 3 (To verify if the target is vulnerable with a new config file):
- java -jar iis_shortname_scanner.jar [URL] [configFile]
-
+```
+java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar [URL] [configFile]
+```
 
 USAGE 4 (To find 8.3 file names with a new config file):
- java -jar iis_shortname_scanner.jar [ShowProgress] [ThreadNumbers] [URL] [configFile]
+```
+java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar [ShowProgress] [ThreadNumbers] [URL] [configFile]
+```
 
 USAGE 5 (To scan multiple targets using a linux box):
- ./multi_targets.sh <scope file> <is_default_https (1=https)>
- 
+```
+./multi_targets.sh <scope file> <is_default_https (1=https)>
+```
+
 DETAILS:
+```
  [ShowProgress]: 0= Show final results only - 1= Show final results step by step  - 2= Show Progress
  [ThreadNumbers]: 0= No thread - Integer Number = Number of concurrent threads [be careful about IIS Denial of Service]
  [URL]: A complete URL - starts with http/https protocol
  [configFile]: path to a new config file which is based on config.xml
+```
 
 Examples:
 ```
 - Example 0 (to see if the target is vulnerable):
- java -jar iis_shortname_scanner.jar http://example.com/folder/
+ java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar http://example.com/folder/
 
 - Example 1 (uses no thread - very slow):
- java -jar iis_shortname_scanner.jar 2 0 http://example.com/folder/new%20folder/
+ java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar 2 0 http://example.com/folder/new%20folder/
 
 - Example 2 (uses 20 threads - recommended):
- java -jar iis_shortname_scanner.jar 2 20 http://example.com/folder/new%20folder/
+ java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar 2 20 http://example.com/folder/new%20folder/
 
 - Example 3 (saves output in a text file):
- java -jar iis_shortname_scanner.jar 0 20 http://example.com/folder/new%20folder/ > c:\results.txt
+ java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar 0 20 http://example.com/folder/new%20folder/ > c:\results.txt
 
 - Example 4 (bypasses IIS basic authentication):
- java -jar iis_shortname_scanner.jar 2 20 http://example.com/folder/AuthNeeded:$I30:$Index_Allocation/
+ java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar 2 20 http://example.com/folder/AuthNeeded:$I30:$Index_Allocation/
 
 - Example 5 (using a new config file):
- java -jar iis_shortname_scanner.jar 2 20 http://example.com/folder/ newconfig.xml 
+ java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar 2 20 http://example.com/folder/ newconfig.xml 
  
 - Example 6 (scanning multiple targets using a linux box):
  ./multi_targets.sh scope.txt 1

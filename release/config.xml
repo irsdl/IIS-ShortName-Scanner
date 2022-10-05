@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ // IIS Shortname Scanner
+  ~ // Released as open source by Soroush Dalili (@irsdl)
+  ~ // Researched & developed by Soroush Dalili (@irsdl)
+  ~ // Project link: https://github.com/irsdl/IIS-ShortName-Scanner
+  ~ // Released under AGPL see LICENSE for more information
+  -->
+
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <properties>
 	<comment>IIS Short File/Folder Name (8.3) Scanner - Configuration File</comment>

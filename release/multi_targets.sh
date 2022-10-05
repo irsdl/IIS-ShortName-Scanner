@@ -1,5 +1,13 @@
 #!/bin/bash
 
+#
+# // IIS Shortname Scanner
+# // Released as open source by Soroush Dalili (@irsdl)
+# // Researched & developed by Soroush Dalili (@irsdl)
+# // Project link: https://github.com/irsdl/IIS-ShortName-Scanner
+# // Released under AGPL see LICENSE for more information
+#
+
 if [ -z "$1" ]; then
         echo "[*] Scanning multiple targets using IIS Short Name (8.3) Scanner by Soroush Dalili - @irsdl"
         echo "[*] Usage: $0 <scope file> <is_default_https (1=https)>"
@@ -52,6 +60,6 @@ uniquehostname=($(printf "%s\n" "${uniquehostname[@]}" | sort -u));
 
 for myhostname in "${uniquehostname[@]}"; do
         targetFile=$(echo "$myhostname" | tr '[\/\\\:\000-\017\177\377]' '_')
-        timeout 30 java -jar iis_shortname_scanner.jar 0 20 "$myhostname" > "$resultDir/iis_shortname_${targetFile}.txt"
+        timeout 30 java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar 0 20 "$myhostname" > "$resultDir/iis_shortname_${targetFile}.txt"
 done
 
