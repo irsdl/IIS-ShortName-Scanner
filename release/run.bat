@@ -1,1 +1,1 @@
-java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar
+java -jar iis_shortname_scanner.jar

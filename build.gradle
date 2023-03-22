@@ -4,23 +4,30 @@ apply plugin: 'maven-publish'
 group 'com.irsdl'
 version ''
 
+apply plugin: 'application'
+
 repositories {
     mavenCentral()
-    maven {
-        url "https://jitpack.io"
-    }
 }
 
 dependencies {
-
+    // https://mvnrepository.com/artifact/org.apache.commons/commons-text
+    implementation 'org.apache.commons:commons-text:1.10.0'
+    // https://mvnrepository.com/artifact/org.apache.httpcomponents.client5/httpclient5
+    implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.1'
+    // https://mvnrepository.com/artifact/org.slf4j/slf4j-simple
+    implementation 'org.slf4j:slf4j-simple:2.0.7'
+    // https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-api
+    implementation 'org.apache.logging.log4j:log4j-api:2.20.0'
+    // https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-slf4j-impl
+    implementation 'org.apache.logging.log4j:log4j-slf4j-impl:2.20.0'
 }
 
 jar{
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     archivesBaseName = "iis_shortname_scanner"
     manifest {
-        attributes 'Implementation-Title': 'Gradle Quickstart',
-                'Implementation-Version': version,
-                'Main-Class': 'iisShortNameScanner.IISShortNameScannerTool'
+        attributes 'Main-Class': 'iisShortNameScanner.IISShortNameScannerTool'
     }
     from {
         (configurations.runtimeClasspath).collect { it.isDirectory() ? it : zipTree(it) }
@@ -32,15 +39,8 @@ jar{
     }
 }
 
+mainClassName = 'iisShortNameScanner.IISShortNameScannerTool'
+
 tasks.withType(Jar) {
-    destinationDirectory = file("$rootDir/build/compiled")
+    destinationDirectory = file("$rootDir/release/")
 }
-
-task copyJarForArchivingTask(type: Copy) {
-        dependsOn(jar)
-        from layout.buildDirectory.dir("$rootDir/build/compiled")
-        include "*.jar"
-        into layout.buildDirectory.dir("$rootDir/release")
-}
-
-build.dependsOn copyJarForArchivingTask

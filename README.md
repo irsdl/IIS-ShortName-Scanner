@@ -1,6 +1,8 @@
-IIS Short Name Scanner
+IIS Short Name Scanner - 2012-2023 and still giving...
 =====================
 The latest version of scanner for IIS short file name (8.3) disclosure vulnerability by using the tilde (~) character.
+
+This is an old tool and the code is a spaghetti! It has recently been updated, so it can support sending custom HTTP methods without reflection hacks in Java. However, some awesome researchers have tried to reimplement this tool using other technologies such as in Go, and when they become mature, they probably work better than this!
 
 Description
 -------------
@@ -12,7 +14,7 @@ Original research file: http://soroush.secproject.com/downloadable/microsoft_iis
 
 It is possible to detect short names of files and directories which have an 8.3 equivalent in Windows by using some vectors in several versions of Microsoft IIS. For instance, it is possible to detect all short-names of ".aspx" files as they have 4 letters in their extensions.
 
-Note: new techniques have been introduced to the latest versions of this scanner and it can now scan IIS8.5 when it is vulnerable. 
+Note: new techniques have been introduced to the latest versions of this scanner, and it can now scan IIS10 when it is vulnerable. 
 
 It is not easy to find the original file or folder names based on the short names. However, the following methods are recommended as examples:
 - If you can guess the full extension (for instance .ASPX when the 8.3 extension is .ASP), always try the short name with the full extension.
@@ -22,11 +24,10 @@ It is not easy to find the original file or folder names based on the short name
 
 Installation
 --------------
-The recent version has been compiled by using Open JDK 17 (an old jar fail for JDK7 is also available). 
+The recent version has been compiled by using Open JDK 18 (the old jar files for other JDKs have been removed but can be found in the Git history). 
 You will need to download files in the [/release](https://github.com/irsdl/IIS-ShortName-Scanner/tree/master/release) directory to use this old application!
 
 You can also compile this application yourself. Please submit any issues in GitHub for further investigation.
-It should be straight forward to open this project in Eclipse as well.
 
 Usage
 -------
@@ -35,22 +36,22 @@ Usage
 
 USAGE 1 (To verify if the target is vulnerable with the default config file):
 ```
-java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED  -jar iis_shortname_scanner.jar [URL]
+java -jar iis_shortname_scanner.jar [URL]
 ```
 
 USAGE 2 (To find 8.3 file names with the default config file):
 ```
-java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar [ShowProgress] [ThreadNumbers] [URL]
+java -jar iis_shortname_scanner.jar [ShowProgress] [ThreadNumbers] [URL]
 ```
 
 USAGE 3 (To verify if the target is vulnerable with a new config file):
 ```
-java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar [URL] [configFile]
+java -jar iis_shortname_scanner.jar [URL] [configFile]
 ```
 
 USAGE 4 (To find 8.3 file names with a new config file):
 ```
-java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar [ShowProgress] [ThreadNumbers] [URL] [configFile]
+java -jar iis_shortname_scanner.jar [ShowProgress] [ThreadNumbers] [URL] [configFile]
 ```
 
 USAGE 5 (To scan multiple targets using a linux box):
@@ -69,29 +70,29 @@ DETAILS:
 Examples:
 ```
 - Example 0 (to see if the target is vulnerable):
- java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar http://example.com/folder/
+ java -jar iis_shortname_scanner.jar http://example.com/folder/
 
 - Example 1 (uses no thread - very slow):
- java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar 2 0 http://example.com/folder/new%20folder/
+ java -jar iis_shortname_scanner.jar 2 0 http://example.com/folder/new%20folder/
 
 - Example 2 (uses 20 threads - recommended):
- java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar 2 20 http://example.com/folder/new%20folder/
+ java -jar iis_shortname_scanner.jar 2 20 http://example.com/folder/new%20folder/
 
 - Example 3 (saves output in a text file):
- java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar 0 20 http://example.com/folder/new%20folder/ > c:\results.txt
+ java -jar iis_shortname_scanner.jar 0 20 http://example.com/folder/new%20folder/ > c:\results.txt
 
 - Example 4 (bypasses IIS basic authentication):
- java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar 2 20 http://example.com/folder/AuthNeeded:$I30:$Index_Allocation/
+ java -jar iis_shortname_scanner.jar 2 20 http://example.com/folder/AuthNeeded:$I30:$Index_Allocation/
 
 - Example 5 (using a new config file):
- java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar 2 20 http://example.com/folder/ newconfig.xml 
+ java -jar iis_shortname_scanner.jar 2 20 http://example.com/folder/ newconfig.xml 
  
 - Example 6 (scanning multiple targets using a linux box):
  ./multi_targets.sh scope.txt 1
 ```
 
 Note 1: Edit config.xml file to change the scanner settings and add additional headers.
-Note 2: Sometimes it does not work for the first time and you need to try again.
+Note 2: Sometimes it does not work for the first time, and you need to try again.
 
 
 How Does It Work?

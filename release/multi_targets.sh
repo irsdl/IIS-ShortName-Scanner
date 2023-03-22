@@ -60,6 +60,6 @@ uniquehostname=($(printf "%s\n" "${uniquehostname[@]}" | sort -u));
 
 for myhostname in "${uniquehostname[@]}"; do
         targetFile=$(echo "$myhostname" | tr '[\/\\\:\000-\017\177\377]' '_')
-        timeout 30 java --illegal-access=permit --add-opens java.base/java.net=ALL-UNNAMED -jar iis_shortname_scanner.jar 0 20 "$myhostname" > "$resultDir/iis_shortname_${targetFile}.txt"
+        timeout 30 java -jar iis_shortname_scanner.jar 0 20 "$myhostname" > "$resultDir/iis_shortname_${targetFile}.txt"
 done
 
