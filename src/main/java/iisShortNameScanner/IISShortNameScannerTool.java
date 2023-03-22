@@ -103,7 +103,7 @@ public class IISShortNameScannerTool {
     CloseableHttpClient httpClient = null;
     private static String nameStartsWith = "";
     private static String extStartsWith = "";
-    private static int maxNumericalPart = 10;
+    private static int maxNumericalPart = 4; // 9 in Windows 95, 98, ME
     private static int forceNumericalPart = 1;
     private static boolean showActualNames;
     private static boolean isLastFolderIgnored = false;
@@ -435,7 +435,7 @@ public class IISShortNameScannerTool {
                         }
                     }
                     case "maxnumericalpart" -> {
-                        maxNumericalPart = Integer.parseInt(properties.getProperty(key, "10"));
+                        maxNumericalPart = Integer.parseInt(properties.getProperty(key, "4"));
                         if (maxNumericalPart < 1) maxNumericalPart = 1; // set to minimum
                     }
                     case "forcenumericalpart" -> {
