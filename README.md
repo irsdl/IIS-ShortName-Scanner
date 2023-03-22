@@ -1,11 +1,13 @@
 IIS Short Name Scanner - 2012-2023 and still giving...
 =====================
+
 The latest version of scanner for IIS short file name (8.3) disclosure vulnerability by using the tilde (~) character.
 
 This is an old tool and the code is a spaghetti! It has recently been updated, so it can support sending custom HTTP methods without reflection hacks in Java. However, some awesome researchers have tried to reimplement this tool using other technologies such as in Go, and when they become mature, they probably work better than this!
 
 Description
 -------------
+
 Microsoft IIS contains a flaw that may lead to an unauthorized information disclosure. The issue is triggered during the parsing of a request that contains a tilde character (~). This may allow a remote attacker to gain access to file and folder name information.
 
 This scanner was moved from https://code.google.com/p/iis-shortname-scanner-poc/ to GitHub for better support.
@@ -24,7 +26,9 @@ It is not easy to find the original file or folder names based on the short name
 
 Installation
 --------------
+
 The recent version has been compiled by using Open JDK 18 (the old jar files for other JDKs have been removed but can be found in the Git history). 
+
 You will need to download files in the [/release](https://github.com/irsdl/IIS-ShortName-Scanner/tree/master/release) directory to use this old application!
 
 You can also compile this application yourself. Please submit any issues in GitHub for further investigation.
@@ -115,6 +119,7 @@ I believe monitoring the requests by using a proxy is the best way of understati
 
 How To Fix This Issue
 ----------------------
+
 Microsoft will not patch this security issue. Their last response is as follows:
 ```
 Thank you for contacting the Microsoft Security Response Center.  
@@ -134,6 +139,7 @@ Note: The web folder needs to be recreated, as the change to the NtfsDisable8dot
 
 References
 ------------
+
 One of the new methods: https://soroush.secproject.com/blog/2014/08/iis-short-file-name-disclosure-is-back-is-your-server-vulnerable/
 
 Original research file: http://soroush.secproject.com/downloadable/microsoft_iis_tilde_character_vulnerability_feature.pdf
