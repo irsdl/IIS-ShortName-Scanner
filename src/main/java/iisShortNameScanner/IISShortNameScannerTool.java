@@ -76,7 +76,7 @@ public class IISShortNameScannerTool {
     private static int acceptableDifferenceLengthBetweenResponses;
     private static boolean onlyCheckForVulnerableSite = false;
     private static String configFile = "config.xml";
-    private final static String strVersion = "2023.0";
+    private final static String strVersion = "2023.1";
     public Set<String> finalResultsFiles = new TreeSet<>();
     public Set<String> finalResultsDirs = new TreeSet<>();
     private static String[] arrayScanList;
@@ -407,7 +407,7 @@ public class IISShortNameScannerTool {
                     }
                     case "magicfinalpartdelimiter" -> magicFinalPartDelimiter = properties.getProperty(key, ",");
                     case "magicfinalpartlist" ->
-                            magicFinalPartStringList = properties.getProperty(key, "\\a.asp,/a.asp,\\a.aspx,/a.aspx,/a.shtml,/a.asmx,/a.ashx,/a.config,/a.php,/a.jpg,,/a.xxx");
+                            magicFinalPartStringList = properties.getProperty(key, "\\a.asp,/a.asp,\\a.aspx,/a.aspx,/a.shtml,/a.asmx,/a.ashx,/a.config,/a.php,/a.jpg,/a.xxx");
                     case "questionmarksymbol" -> questionMarkSymbol = properties.getProperty(key, "?");
                     case "asterisksymbol" -> asteriskSymbol = properties.getProperty(key, "*");
                     case "magicfilename" -> magicFileName = properties.getProperty(key, "*~1*");
@@ -553,8 +553,13 @@ public class IISShortNameScannerTool {
                     } else {
                         isQuestionMarkReliable = isQuestionMarkReliable();
                         if (concurrentThreads == 0) {
-                            iterateScanFileName("");
+                            iterateScanFileNameLegacy("");
                         } else {
+                            //Done: 1- purify the number in ~1 to reduce the maximum if for example it should only go as high as 1
+                            //TODO: 2- find list of valid extensions first, then apply them to identified names -> if no extensions exist, they are all directories
+                            //TODO: 3- send a request to the shortname file and its extension to see whether it can be served directly (this is when a file has been actually saved with its shortname)
+                            //TODO: 4- try to guess a complete extension based on a predefined list of all potential extensions
+                            //TODO: 5- Show those files having 4 Letter Hex after first 2 letters
                             scanListPurifier();
                             threadPool = new ThreadPool(concurrentThreads);
                             incThreadCounter(1);
@@ -677,8 +682,9 @@ public class IISShortNameScannerTool {
     private void scanListPurifier() {
         try {
             ThreadPool localThreadPool = new ThreadPool(concurrentThreads);
-            for (String s : arrayScanList) {
+            localThreadPool.runTask(multithread_FindingTildeMaxNumber());
 
+            for (String s : arrayScanList) {
                 if (nameStartsWith.length() < 6)
                     localThreadPool.runTask(multithread_NameCharPurifier(s));
 
@@ -704,6 +710,31 @@ public class IISShortNameScannerTool {
         }
     }
 
+    private Runnable multithread_FindingTildeMaxNumber(){
+        return new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    showOutputs("Finding maximum number after ~", OutputType.DEBUG);
+                    for(int i=1; i <= maxNumericalPart; i++){
+                        String statusCode = getStatus("/" + nameStartsWith + asteriskSymbol + "~" + i + asteriskSymbol + magicFinalPart); // Should be valid to be added to the list
+                        if (statusCode.equals("invalid")) {
+                            maxNumericalPart = i-1;
+                            break;
+                        }
+                    }
+                } catch (Exception err) {
+                    if (debugMode) {
+                        StringWriter sw = new StringWriter();
+                        err.printStackTrace(new PrintWriter(sw));
+                        String exceptionAsString = sw.toString();
+                        showOutputs(exceptionAsString, OutputType.ERROR);
+                    }
+                }
+                decThreadCounter(1);
+            }
+        };
+    }
     private Runnable multithread_NameCharPurifier(final String strInput) {
         return new Runnable() {
 
@@ -838,9 +869,9 @@ public class IISShortNameScannerTool {
                                             addValidFileToResults(fileName.toUpperCase() + extStartsWith);
                                         } else {
                                             incThreadCounter(1);
-                                            threadPool.runTask(multithread_iterateScanFileExtension(fileName, ""));
+                                            threadPool.runTask(multithread_iterateScanFileExtension(fileName, "", false));
                                         }
-                                        statusCode = getStatus("/" + newStr + magicFileName.replace("1", Integer.toString(++counter)) + magicFinalPart);
+                                        ++counter;
                                     } else {
                                         showOutputs("\rFile: " + fileName.toUpperCase() + ".??? - extension cannot be found\t\t", ShowProgressMode.PARTIALRESULT);
                                         addValidFileToResults(fileName.toUpperCase() + ".???");
@@ -883,7 +914,7 @@ public class IISShortNameScannerTool {
         };
     }
 
-    private void iterateScanFileName(String strInput){
+    private void iterateScanFileNameLegacy(String strInput){
         boolean atLeastOneSuccess = false;
         if (strInput.equals("") && !nameStartsWith.equals("")) {
             strInput = nameStartsWith;
@@ -921,7 +952,7 @@ public class IISShortNameScannerTool {
                                 // we have already found our file as the extension was in the config file
                                 addValidFileToResults(fileName.toUpperCase() + extStartsWith);
                             } else {
-                                iterateScanFileExtension(fileName, "");
+                                iterateScanFileExtensionLegacy(fileName, "");
                             }
                             statusCode = getStatus("/" + newStr + magicFileName.replace("1", Integer.toString(++counter)) + magicFinalPart);
                         } else {
@@ -931,10 +962,10 @@ public class IISShortNameScannerTool {
                         }
                     }
                     if (isItLastFileName == 2) {
-                        iterateScanFileName(newStr);
+                        iterateScanFileNameLegacy(newStr);
                     }
                 } else {
-                    iterateScanFileName(newStr);
+                    iterateScanFileNameLegacy(newStr);
                 }
             } else {
                 // Ignore it?
@@ -954,8 +985,7 @@ public class IISShortNameScannerTool {
     private int isItLastFileName(String strInput) {
         int result = 1; // File is available and there is no more file
         if (!isQuestionMarkReliable) {
-            // we cannot use "?" for this validation...
-            // this result will include false positives...
+            // we cannot use "?" for this validation as this result will include false positives...
             result = 2;
         } else {
             if (strInput.length() < 6) {
@@ -987,7 +1017,7 @@ public class IISShortNameScannerTool {
         return result;
     }
 
-    private Runnable multithread_iterateScanFileExtension(final String strFilename, final String strInputFinal) {
+    private Runnable multithread_iterateScanFileExtension(final String strFilename, final String strInputFinal, final boolean hasValidParent) {
         return new Runnable() {
 
             public void run() {
@@ -997,6 +1027,9 @@ public class IISShortNameScannerTool {
                         strInput = extStartsWith;
                     }
                     boolean atLeastOneSuccess = false;
+                    if(hasValidParent)
+                        atLeastOneSuccess = true;
+
                     for (int i = 0; i < arrayScanListExt.length; i++) {
                         String newStr = strInput + arrayScanListExt[i];
                         String statusCode;
@@ -1019,11 +1052,11 @@ public class IISShortNameScannerTool {
                                 addValidFileToResults(fileName.toUpperCase());
                                 if (newStr.length() < 3) {
                                     incThreadCounter(1);
-                                    threadPool.runTask(multithread_iterateScanFileExtension(strFilename, newStr));
+                                    threadPool.runTask(multithread_iterateScanFileExtension(strFilename, newStr, true));
                                 }
                             } else {
                                 incThreadCounter(1);
-                                threadPool.runTask(multithread_iterateScanFileExtension(strFilename, newStr));
+                                threadPool.runTask(multithread_iterateScanFileExtension(strFilename, newStr, true));
                             }
                         } else {
                             // Ignore it?
@@ -1051,7 +1084,7 @@ public class IISShortNameScannerTool {
         };
     }
 
-    private void iterateScanFileExtension(String strFilename, String strInput) {
+    private void iterateScanFileExtensionLegacy(String strFilename, String strInput) {
         if (strInput.equals("") && !extStartsWith.equals("")) {
             strInput = extStartsWith;
         }
@@ -1072,10 +1105,10 @@ public class IISShortNameScannerTool {
                     showOutputs("\rFile: " + fileName.toUpperCase() + "\t\t", ShowProgressMode.PARTIALRESULT);
                     addValidFileToResults(fileName.toUpperCase());
                     if (newStr.length() < 3) {
-                        iterateScanFileExtension(strFilename, newStr);
+                        iterateScanFileExtensionLegacy(strFilename, newStr);
                     }
                 } else {
-                    iterateScanFileExtension(strFilename, newStr);
+                    iterateScanFileExtensionLegacy(strFilename, newStr);
                 }
             } else {
                 // Ignore it?

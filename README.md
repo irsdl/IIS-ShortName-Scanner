@@ -1,7 +1,7 @@
-IIS Short Name Scanner - 2012-2023 and still giving...
+IIS Short Name Scanner - 2012-2023 & Still Giving...
 =====================
 
-The latest version of scanner for IIS short file name (8.3) disclosure vulnerability by using the tilde (~) character.
+The latest version of scanner for IIS short file name (8.3) disclosure vulnerability by using the tilde (~) character. This issue has been discovered in 2010 but has been evolved a few times since.
 
 This is an old tool and the code is a spaghetti, but it is capable to tackle even the latest IIS (IIS 10 on Windows Server 2022 at the time of writing this)! It has recently been updated, so it can support sending custom HTTP methods without reflection hacks in Java. However, some awesome researchers have tried to reimplement this tool using other technologies such as in Go, and when they become mature, they probably work better than this!
 
