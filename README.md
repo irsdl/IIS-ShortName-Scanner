@@ -137,6 +137,34 @@ Therefore, it is recommended to deploy IIS with 8.3 names disabled by creating t
 Note: The web folder needs to be recreated, as the change to the NtfsDisable8dot3NameCreation registry entry affects only files and directories that are created after the change, so the files that already exist are not affected.
 
 
+Docker Usage
+------------
+build the image:
+  ```bash
+  docker build . -t shortname
+  ```
+
+file mode:
+  ```bash
+  docker run \
+    -v $(realpath urls.txt):/app/urls.txt \
+    -v $(realpath output_dir):/app/iis_shortname_results \
+    shortname -f urls.txt
+  ```
+
+single mode:
+  ```bash
+  docker run shortname 2 20 http://example.com
+  ```
+
+overwrite config file:
+  ```bash
+  docker run \
+  -v $(realpath config.xml):/app/config.xml \
+  shortname http://example.com
+  ```
+
+
 References
 ------------
 

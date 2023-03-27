@@ -33,7 +33,7 @@ scope=`cat "$1"`
 
 ### IIS Shortname Scanner time!
 resultDir="$CUR"/iis_shortname_results
-mkdir "$resultDir"
+mkdir -p "$resultDir"
 
 uniquehostname=()
 while read target; do
