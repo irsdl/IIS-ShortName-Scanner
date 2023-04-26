@@ -33,7 +33,10 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.*;
-import java.net.*;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
@@ -76,7 +79,7 @@ public class IISShortNameScannerTool {
     private static int acceptableDifferenceLengthBetweenResponses;
     private static boolean onlyCheckForVulnerableSite = false;
     private static String configFile = "config.xml";
-    private final static String strVersion = "2023.1";
+    private final static String strVersion = "2023.2";
     public Set<String> finalResultsFiles = new TreeSet<>();
     public Set<String> finalResultsDirs = new TreeSet<>();
     private static String[] arrayScanList;
@@ -90,8 +93,9 @@ public class IISShortNameScannerTool {
     private static int concurrentThreads;
     private String magicFinalPart;
     private String reliableRequestMethod;
-    private String validStatus = "";
-    private List<String> invalidStatus = new ArrayList<>();
+
+    private List<String> validStatusList = new ArrayList<>();
+    private List<String> invalidStatusList = new ArrayList<>();
     private boolean isQuestionMarkReliable = false;
     private boolean isExtensionReliable = false;
     private int threadCounter = 0;
@@ -109,6 +113,8 @@ public class IISShortNameScannerTool {
     private static boolean isLastFolderIgnored = false;
     private static boolean useProvidedURLWithoutChange;
     private static boolean performUrlEncoding;
+
+    private static int minVulnerableCheckRepeat;
 
 
     public static void main(String[] args) {
@@ -463,6 +469,10 @@ public class IISShortNameScannerTool {
                             performUrlEncoding = false;
                         }
                     }
+                    case "minvulnerablecheckrepeat" -> {
+                        minVulnerableCheckRepeat = Integer.parseInt(properties.getProperty(key, "3"));
+                        if (minVulnerableCheckRepeat < 1) minVulnerableCheckRepeat = 1; // set to minimum
+                    }
                     default -> showOutputs("Unknown item in config file: " + key);
                 }
                 if (Objects.equals(value, "")) value = "Default";
@@ -533,7 +543,7 @@ public class IISShortNameScannerTool {
         magicFileName = magicFileName.replace("*", asteriskSymbol);
         magicFileExtension = magicFileExtension.replace("*", asteriskSymbol);
 
-        boolean isReliableResult = false;
+        boolean isVulnerableResult = false;
         // Create the proxy string
         if (!proxyServerName.equals("") && proxyServerPort > 0) {
             proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyServerName, proxyServerPort));
@@ -546,8 +556,8 @@ public class IISShortNameScannerTool {
                 showOutputs("Testing request method: \"" + s2 + "\" with magic part: \"" + s1 + "\" ...", ShowProgressMode.PARTIALRESULT);
 
 
-                isReliableResult = isReliable();
-                if (isReliableResult) {
+                isVulnerableResult = isVulnerable();
+                if (isVulnerableResult) {
                     if (onlyCheckForVulnerableSite) {
                         break;
                     } else {
@@ -569,7 +579,7 @@ public class IISShortNameScannerTool {
                     break;
                 }
             }
-            if (isReliableResult) break;
+            if (isVulnerableResult) break;
         }
 
         while (threadCounter != 0) {
@@ -580,7 +590,7 @@ public class IISShortNameScannerTool {
             showOutputs("");
         showOutputs("# IIS Short Name (8.3) Scanner version " + strVersion + " - scan initiated " + (new SimpleDateFormat("yyyy/MM/dd HH:mm:ss")).format(new Date()));
         showOutputs("Target: " + destURL);
-        if (!isReliableResult)
+        if (!isVulnerableResult)
             showOutputsTree("Result: Not vulnerable or no item was found. It was not possible to get proper/different error messages from the server. Check the inputs and try again.", 0);
         else {
             showOutputsTree("Result: Vulnerable!", 0);
@@ -710,16 +720,16 @@ public class IISShortNameScannerTool {
         }
     }
 
-    private Runnable multithread_FindingTildeMaxNumber(){
+    private Runnable multithread_FindingTildeMaxNumber() {
         return new Runnable() {
             @Override
             public void run() {
                 try {
                     showOutputs("Finding maximum number after ~", OutputType.DEBUG);
-                    for(int i=1; i <= maxNumericalPart; i++){
+                    for (int i = 1; i <= maxNumericalPart; i++) {
                         String statusCode = getStatus("/" + nameStartsWith + asteriskSymbol + "~" + i + asteriskSymbol + magicFinalPart); // Should be valid to be added to the list
                         if (statusCode.equals("invalid")) {
-                            maxNumericalPart = i-1;
+                            maxNumericalPart = i - 1;
                             break;
                         }
                     }
@@ -735,6 +745,7 @@ public class IISShortNameScannerTool {
             }
         };
     }
+
     private Runnable multithread_NameCharPurifier(final String strInput) {
         return new Runnable() {
 
@@ -914,7 +925,7 @@ public class IISShortNameScannerTool {
         };
     }
 
-    private void iterateScanFileNameLegacy(String strInput){
+    private void iterateScanFileNameLegacy(String strInput) {
         boolean atLeastOneSuccess = false;
         if (strInput.equals("") && !nameStartsWith.equals("")) {
             strInput = nameStartsWith;
@@ -1027,7 +1038,7 @@ public class IISShortNameScannerTool {
                         strInput = extStartsWith;
                     }
                     boolean atLeastOneSuccess = false;
-                    if(hasValidParent)
+                    if (hasValidParent)
                         atLeastOneSuccess = true;
 
                     for (int i = 0; i < arrayScanListExt.length; i++) {
@@ -1138,7 +1149,7 @@ public class IISShortNameScannerTool {
                     result = true;
                 } else if (getStatus("/" + strInput + "." + asteriskSymbol + magicFinalPart).equals("valid")) {
                     result = true;
-                } else if (!sendHTTPReq(strInput + magicFinalPart, 0).equals(sendHTTPReq(strInput + "xxx" + magicFinalPart, 0))) {
+                } else if (!sendHTTPReq(strInput + magicFinalPart).equals(sendHTTPReq(strInput + "xxx" + magicFinalPart))) {
                     result = true;
                 }
             }
@@ -1204,7 +1215,7 @@ public class IISShortNameScannerTool {
 
             strAddition = strAddition.replace("//", "/");
 
-            String statusResponse = sendHTTPReq(strAddition, 0);
+            String statusResponse = sendHTTPReq(strAddition);
             //status = HTTPReqResponseSocket(strAddition, 0);
 			
 			/*
@@ -1217,18 +1228,18 @@ public class IISShortNameScannerTool {
 			*/
 
             // blocklist approach to find even more for difficult and strange cases!
-            if (invalidStatus.contains(statusResponse)) {
+            if (invalidStatusList.contains(statusResponse)) {
                 status = "invalid";
-            } else if (validStatus.substring(0,50).equals(statusResponse.substring(0,50))) {
+            } else if (validStatusList.stream().anyMatch(str -> str.substring(0, 50).equals(statusResponse.substring(0, 50)))) {
                 status = "valid";
-            } else if (counter > 2){
-                for(var is : invalidStatus){
-                    if (is.substring(0,50).equals(statusResponse.substring(0,50))){
+            } else if (counter > 2) {
+                for (var is : invalidStatusList) {
+                    if (is.substring(0, 50).equals(statusResponse.substring(0, 50))) {
                         status = "invalid";
                         break;
                     }
                 }
-                if(status.isBlank())
+                if (status.isBlank())
                     status = "valid";
             } else {
                 // we send the request again to ensure this was not just a one off
@@ -1248,75 +1259,155 @@ public class IISShortNameScannerTool {
         return status;
     }
 
+    private List<String> getUniqueResponseList(String targetURL) {
+        return getResponseList(targetURL, minVulnerableCheckRepeat, acceptableDifferenceLengthBetweenResponses, true);
+    }
 
-    private boolean isReliable() {
+    private List<String> getResponseList(String targetURL, int numberOfChecks, int responseLengthDifferenceThreshold, boolean keepUnique) {
+        List<String> finalResponseList = new ArrayList<>();
+
+        if (numberOfChecks < 1) {
+            numberOfChecks = 1;
+        }
+
+        for (int i = 0; i < numberOfChecks; i++) {
+            String currentResponse = sendHTTPReq(targetURL);
+
+            if (keepUnique) {
+                if (!isResponseInList(currentResponse, finalResponseList, responseLengthDifferenceThreshold)) {
+                    finalResponseList.add(currentResponse);
+                }
+            } else {
+                finalResponseList.add(currentResponse);
+            }
+        }
+
+        return finalResponseList;
+    }
+
+    private List<String> keepUniqueResponseList(List<String> sourceList, List<String> comparedWithList, int responseLengthDifferenceThreshold) {
+        List<String> mergedList = new ArrayList<>();
+        List<String> uniqueList = new ArrayList<>();
+
+        mergedList.addAll(comparedWithList);
+
+        for (String sourceItem : sourceList) {
+            boolean isUnique = true;
+            if (!mergedList.contains(sourceItem)) {
+                if (responseLengthDifferenceThreshold > 0) {
+                    for (String targetItem : comparedWithList) {
+                        if (Math.abs(targetItem.length() - sourceItem.length()) <= responseLengthDifferenceThreshold) {
+                            // we can safely ignore it as it is within the threshold
+                            isUnique = false;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                isUnique = false;
+            }
+
+            if (isUnique) {
+                mergedList.add(sourceItem);
+                uniqueList.add(sourceItem);
+            }
+        }
+
+        return uniqueList;
+    }
+
+    private boolean isResponseInList(String currentResponse, List<String> sourceList, int responseLengthDifferenceThreshold) {
+        boolean isUnique = true;
+        if (!sourceList.contains(currentResponse)) {
+            if (responseLengthDifferenceThreshold > 0) {
+                for (String sourceItem : sourceList) {
+                    if (Math.abs(sourceItem.length() - currentResponse.length()) <= responseLengthDifferenceThreshold) {
+                        // we can safely ignore it as it is within the threshold
+                        isUnique = false;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return !isUnique;
+    }
+
+    private boolean doResponseListsShareOneItem(List<String> sourceList, List<String> targetList, int responseLengthDifferenceThreshold) {
+        boolean isUnique = true;
+        for (String sourceItem : sourceList) {
+            if (!targetList.contains(sourceItem)) {
+                if (responseLengthDifferenceThreshold > 0) {
+                    for (String targetItem : targetList) {
+                        if (Math.abs(targetItem.length() - sourceItem.length()) <= responseLengthDifferenceThreshold) {
+                            // we can safely ignore it as it is within the threshold
+                            isUnique = false;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                isUnique = false;
+            }
+
+            if (!isUnique) {
+                break;
+            }
+        }
+
+        return !isUnique;
+    }
+
+
+    private boolean isVulnerable() {
         boolean result = false;
         try {
-            validStatus = sendHTTPReq("/" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
-            int validStatusLength = validStatus.length();
-            String tempInvalidStatus1;
-            tempInvalidStatus1 = sendHTTPReq("/1234567890" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0); // Invalid name
-            int invalidStatus1Length = tempInvalidStatus1.length();
+            validStatusList = getUniqueResponseList("/" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart);
 
+            List<String> tempInvalidStatus1List = getUniqueResponseList("/1234567890" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart);
 
-            if (!validStatus.equals(tempInvalidStatus1) && !(acceptableDifferenceLengthBetweenResponses >= 0 &&
-                    Math.abs(invalidStatus1Length - validStatusLength) <= acceptableDifferenceLengthBetweenResponses)) {
+            List<String> tempInvalidStatus1UniqueList = keepUniqueResponseList(tempInvalidStatus1List, invalidStatusList, acceptableDifferenceLengthBetweenResponses);
 
-                if (!invalidStatus.contains(tempInvalidStatus1))
-                    invalidStatus.add(tempInvalidStatus1);
+            if (!doResponseListsShareOneItem(validStatusList, tempInvalidStatus1UniqueList, acceptableDifferenceLengthBetweenResponses)) {
+                invalidStatusList.addAll(tempInvalidStatus1UniqueList);
 
-                // We need to find invalid status messages
+                // Invalid different name
+                List<String> tempInvalidStatus2List = getUniqueResponseList("/0123456789" + asteriskSymbol + "~1." + asteriskSymbol + magicFinalPart);
+                List<String> tempInvalidStatus2UniqueList = keepUniqueResponseList(tempInvalidStatus2List, invalidStatusList, acceptableDifferenceLengthBetweenResponses);
+                invalidStatusList.addAll(tempInvalidStatus2UniqueList);
 
-                String tempInvalidStatus2 = sendHTTPReq("/0123456789" + asteriskSymbol + "~1." + asteriskSymbol + magicFinalPart, 0); // Invalid different name
-                int tempInvalidStatus2Length = tempInvalidStatus2.length();
-                if (!invalidStatus.contains(tempInvalidStatus2))
-                    invalidStatus.add(tempInvalidStatus2);
-
-                String tempInvalidStatus3 = sendHTTPReq("/0123456789" + asteriskSymbol + "~1.1234" + asteriskSymbol + magicFinalPart, 0); // Invalid name and extension
-                int tempInvalidStatus3Length = tempInvalidStatus3.length();
-                if (!invalidStatus.contains(tempInvalidStatus3))
-                    invalidStatus.add(tempInvalidStatus3);
-
-                String tempInvalidStatus4 = sendHTTPReq("/" + asteriskSymbol + "~1.1234" + asteriskSymbol + magicFinalPart, 0); // Invalid extension
-                //int tempInvalidStatus4Length = tempInvalidStatus3.length();
-                if (!invalidStatus.contains(tempInvalidStatus4))
-                    invalidStatus.add(tempInvalidStatus4);
-
-                String tempInvalidStatus5 = sendHTTPReq("/1234567890" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0); // Invalid name with no extension
-                //int tempInvalidStatus5Length = tempInvalidStatus3.length();
-                if (!invalidStatus.contains(tempInvalidStatus5))
-                    invalidStatus.add(tempInvalidStatus5);
-
-                String tempInvalidStatus6 = sendHTTPReq("/1234567890" + asteriskSymbol + "~1" + questionMarkSymbol + magicFinalPart, 0); // Invalid name with no extension and question mark symbol
-                //int tempInvalidStatus5Length = tempInvalidStatus3.length();
-                if (!invalidStatus.contains(tempInvalidStatus6))
-                    invalidStatus.add(tempInvalidStatus6);
-
-                String tempInvalidStatus7 = sendHTTPReq("/" + new String(new char[10]).replace("\0", questionMarkSymbol) + "~1" + asteriskSymbol + magicFinalPart, 0); // Invalid name contains question mark symbol with no extension
-                //int tempInvalidStatus5Length = tempInvalidStatus3.length();
-                if (!invalidStatus.contains(tempInvalidStatus7))
-                    invalidStatus.add(tempInvalidStatus7);
-
-                String tempInvalidStatus8 = sendHTTPReq("/1234567890~1.1234" + magicFinalPart, 0); // Invalid name with no special characters
-                //int tempInvalidStatus5Length = tempInvalidStatus3.length();
-                if (!invalidStatus.contains(tempInvalidStatus8))
-                    invalidStatus.add(tempInvalidStatus8);
-
+                // Invalid name and extension
+                List<String> tempInvalidStatus3List = getUniqueResponseList("/0123456789" + asteriskSymbol + "~1.1234" + asteriskSymbol + magicFinalPart);
+                List<String> tempInvalidStatus3UniqueList = keepUniqueResponseList(tempInvalidStatus3List, invalidStatusList, acceptableDifferenceLengthBetweenResponses);
+                invalidStatusList.addAll(tempInvalidStatus3UniqueList);
 
                 // If two different invalid requests lead to different responses, we cannot rely on them unless their length difference is negligible!
-                if (tempInvalidStatus2.equals(tempInvalidStatus1) ||
-                        (acceptableDifferenceLengthBetweenResponses >= 0 &&
-                                Math.abs(invalidStatus1Length - tempInvalidStatus2Length) <= acceptableDifferenceLengthBetweenResponses)) {
-
-                    if (tempInvalidStatus2.equals(tempInvalidStatus1) ||
-                            (Math.abs(tempInvalidStatus3Length - tempInvalidStatus2Length) <= acceptableDifferenceLengthBetweenResponses)) {
+                if (doResponseListsShareOneItem(tempInvalidStatus1List, tempInvalidStatus2List, acceptableDifferenceLengthBetweenResponses)) {
+                    if (doResponseListsShareOneItem(tempInvalidStatus2List, tempInvalidStatus3List, acceptableDifferenceLengthBetweenResponses)) {
                         isExtensionReliable = true;
                     } else {
                         isExtensionReliable = false;
                     }
+
                     result = true;
                 }
+
+                List<String> otherUrlInvalidCheckPatterns = new ArrayList<>(Arrays.asList(
+                        "/" + asteriskSymbol + "~1.1234" + asteriskSymbol + magicFinalPart, // Invalid extension
+                        "/1234567890" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, // Invalid name with no extension
+                        "/1234567890" + asteriskSymbol + "~1" + questionMarkSymbol + magicFinalPart, // Invalid name with no extension and question mark symbol
+                        "/" + new String(new char[10]).replace("\0", questionMarkSymbol) + "~1" + asteriskSymbol + magicFinalPart, // Invalid name contains question mark symbol with no extension
+                        "/1234567890~1.1234" + magicFinalPart // Invalid name with no special characters
+
+                ));
+
+                for (String item : otherUrlInvalidCheckPatterns) {
+                    List<String> tempInvalidStatusNList = getUniqueResponseList(item);
+                    List<String> tempInvalidStatusNUniqueList = keepUniqueResponseList(tempInvalidStatusNList, invalidStatusList, acceptableDifferenceLengthBetweenResponses);
+                    invalidStatusList.addAll(tempInvalidStatusNUniqueList);
+                }
             }
+
         } catch (Exception err) {
             if (debugMode) {
                 StringWriter sw = new StringWriter();
@@ -1333,17 +1424,31 @@ public class IISShortNameScannerTool {
 
     private boolean isQuestionMarkReliable() {
         boolean result = false;
-        try {
-            String initValidStatus;
-            if (!validStatus.equals(""))
-                initValidStatus = validStatus;
-            else
-                initValidStatus = sendHTTPReq("/" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
 
-            String tempValidStatus = sendHTTPReq("/?" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
-            if (initValidStatus.substring(0,50).equals(tempValidStatus.substring(0,50))) {
+        List<String> initValidStatusList;
+
+        if (!validStatusList.isEmpty())
+            initValidStatusList = validStatusList;
+        else {
+            initValidStatusList = getUniqueResponseList("/" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart);
+            validStatusList = initValidStatusList;
+        }
+
+        try {
+            List<String> tempValidStatusList = getUniqueResponseList("/?" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart);
+
+            if (doResponseListsShareOneItem(initValidStatusList, tempValidStatusList, acceptableDifferenceLengthBetweenResponses)) {
                 result = true;
+            } else {
+                for (String tempValidStatus : tempValidStatusList) {
+                    if (initValidStatusList.stream().anyMatch(str -> str.substring(0, 50).equals(tempValidStatus.substring(0, 50)))) {
+                        result = true;
+                        break;
+                    }
+                }
             }
+
+
         } catch (Exception err) {
             if (debugMode) {
                 StringWriter sw = new StringWriter();
@@ -1355,17 +1460,23 @@ public class IISShortNameScannerTool {
         }
         if (result == false) {
             try {
-                String initValidStatus;
-                if (!validStatus.equals(""))
-                    initValidStatus = validStatus;
-                else
-                    initValidStatus = sendHTTPReq("/" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
+                List<String> tempValidStatusList = getUniqueResponseList("/>" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart);
 
-                String tempValidStatus = sendHTTPReq("/>" + asteriskSymbol + "~1" + asteriskSymbol + magicFinalPart, 0);
-                if (initValidStatus.equals(tempValidStatus)) {
+                if (doResponseListsShareOneItem(initValidStatusList, tempValidStatusList, acceptableDifferenceLengthBetweenResponses)) {
                     result = true;
+                } else {
+                    for (String tempValidStatus : tempValidStatusList) {
+                        if (initValidStatusList.stream().anyMatch(str -> str.substring(0, 50).equals(tempValidStatus.substring(0, 50)))) {
+                            result = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (result) {
                     questionMarkSymbol = ">";
                 }
+
             } catch (Exception err) {
                 if (debugMode) {
                     StringWriter sw = new StringWriter();
@@ -1735,11 +1846,11 @@ public class IISShortNameScannerTool {
         httpClient = httpClientBuilder.build();
     }
 
-    private String sendHTTPReq(String strAddition, int retryTimes) {
-        return sendHTTPReq(destURL, strAddition, reliableRequestMethod, "", retryTimes);
+    private String sendHTTPReq(String strAddition) {
+        return sendHTTPReq(destURL, strAddition, reliableRequestMethod, "", 0);
     }
 
-    private String sendHTTPReq(String targetUrl, String strAddition, String httpMethod, String body, int retryTimes) {
+    private String sendHTTPReq(String targetUrl, String strAddition, String httpMethod, String body, int retryCounter) {
         if (httpMethod.isBlank())
             httpMethod = reliableRequestMethod;
         if (targetUrl.isBlank())
@@ -1839,7 +1950,7 @@ public class IISShortNameScannerTool {
             } catch (Exception e) {
 
             }
-            retryTimes++;
+            retryCounter++;
             if (debugMode) {
                 StringWriter sw = new StringWriter();
                 err.printStackTrace(new PrintWriter(sw));
@@ -1847,10 +1958,10 @@ public class IISShortNameScannerTool {
                 showOutputs(exceptionAsString, OutputType.ERROR);
             }
 
-            showOutputs("HTTPReqResponse() - Retry: " + String.valueOf(retryTimes), OutputType.DEBUG, ShowProgressMode.ALL);
+            showOutputs("HTTPReqResponse() - Retry: " + String.valueOf(retryCounter), OutputType.DEBUG, ShowProgressMode.ALL);
 
-            if (retryTimes < maxRetryTimes) {
-                finalResponse = sendHTTPReq(targetUrl, strAddition, httpMethod, body, retryTimes);
+            if (retryCounter < maxRetryTimes) {
+                finalResponse = sendHTTPReq(targetUrl, strAddition, httpMethod, body, retryCounter);
             }
         }
 
