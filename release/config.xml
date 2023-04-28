@@ -58,7 +58,7 @@
 	<entry key="maxDelayAfterEachRequest">1</entry>
 	
 	<entry key="magicFinalPartDelimiter">,</entry>
-	<entry key="magicFinalPartList"><![CDATA[/~1/,/.rem,\a.aspx,\a.asp,/a.aspx,/a.asp,/a.shtml,/a.asmx,/a.ashx,/a.config,/a.php,/a.jpg,/webresource.axd,/a.xxx]]></entry>
+	<entry key="magicFinalPartList"><![CDATA[/~1/,/~1/.rem,\a.aspx,\a.asp,/a.aspx,/a.asp,/a.shtml,/a.asmx,/a.ashx,/a.config,/a.php,/a.jpg,/webresource.axd,/a.xxx]]></entry>
 	
 	<!-- in Windows we can sometimes use > instead of ? -->
 	<entry key="questionMarkSymbol"><![CDATA[?]]></entry>
@@ -71,12 +71,7 @@
 	
 	<!-- "*" will be replaced with asteriskSymbol variable later -->
 	<entry key="magicFileExtension"><![CDATA[*]]></entry>
-	
-	<!-- This will be used to compare the different responses and accept them as equal if their length difference is equal or less than this -->
-	<!--  -1 can be used to ignore this rule completely -->
-	<!-- This may make the scan result unreliable so must be very small value or -1 -->
-	<entry key="acceptableDifferenceLengthBetweenResponses">10</entry>
-	
+
 	<entry key="requestMethodDelimiter">,</entry>
 	<entry key="requestMethod"><![CDATA[OPTIONS,DEBUG,TRACE,GET,POST,HEAD]]></entry>
 	
@@ -92,7 +87,7 @@
 	<entry key="maxNumericalPart">4</entry>
 	
 	<!-- This will be used to set a maximum value on the "NUMBER_HERE" parameter in FILENAME~NUMBER_HERE even when the previous number is not available -->
-	<!-- For instance, if it is set to 3, when we have DEFAUL~1.ASP and we do not have DEFAULT~2.ASP, it still checks DEFAUL~3.asp -->
+	<!-- For instance, if it is set to 3, when we have DEFAUL~1.ASP & we do not have DEFAULT~2.ASP, it still checks DEFAUL~3.asp -->
 	<!-- This parameter automatically override the "maxNumericalPart" parameter when "forceNumericalPart > maxNumericalPart" -->
 	<!-- The minimum value for this parameter is 1 -->
 	<!-- Anything greater than 1 may lead to false positive results -->
@@ -105,6 +100,27 @@
 	
 	<entry key="performUrlEncoding">false</entry>
 	
-	<!-- This is too increase the false positive rate. If it is set to 1 or 2, it may show more false positives. -->
+	<!-- This is to increase the false positive rate. If it is set to 1 or 2, it may show more false positives. -->
 	<entry key="minVulnerableCheckRepeat">3</entry>
+
+	<!-- How to use headers when comparing responses:
+		0=removes them completely and uses status code
+		1=removes them completely but keeps the first status line
+		2=removes simple ones, cleans the rest
+		3=cleans them but doesn't remove them completely
+	-->
+	<entry key="ignoreHeaderLevel">2</entry>
+
+	<!-- How to use body when comparing responses:
+		0=removes it completely
+		1=cleans it but doesn't remove it completely
+	-->
+	<entry key="ignoreBodyLevel">1</entry>
+
+	<!-- This will be used to compare the different responses (header/body) and accept them as equal if their length difference is equal or less than this
+			-1 can be used to ignore this rule completely
+			This may make the scan result unreliable especially with ignoreHeaderLevel<= 1 and/or ignoreBodyLevel=0
+			it is recommended to set it to a very small value such as 5 or -1
+	-->
+	<entry key="acceptableDifferenceLengthBetweenResponses">5</entry>
 </properties>

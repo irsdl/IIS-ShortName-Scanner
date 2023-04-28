@@ -47,6 +47,7 @@ import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager.DEFAULT_MAX_CONNECTIONS_PER_ROUTE;
@@ -67,7 +68,7 @@ public class IISShortNameScannerTool {
     private static int maxConnectionTimeOut;
     private static int maxRetryTimes;
     private static String proxyServerName;
-    private static Integer proxyServerPort;
+    private static int proxyServerPort;
     private static Long maxDelayAfterEachRequest;
     private static String questionMarkSymbol;
     private static String asteriskSymbol;
@@ -76,10 +77,12 @@ public class IISShortNameScannerTool {
     private static String[] magicFinalPartList;
     private static String[] additionalHeaders;
     private static String[] requestMethod;
+    private static int ignoreHeaderLevel;
+    private static int ignoreBodyLevel;
     private static int acceptableDifferenceLengthBetweenResponses;
     private static boolean onlyCheckForVulnerableSite = false;
     private static String configFile = "config.xml";
-    private final static String strVersion = "2023.2";
+    private final static String strVersion = "2023.3";
     public Set<String> finalResultsFiles = new TreeSet<>();
     public Set<String> finalResultsDirs = new TreeSet<>();
     private static String[] arrayScanList;
@@ -172,7 +175,7 @@ public class IISShortNameScannerTool {
                     }
                 } else {
 
-                    // new custom config file
+                    // custom config file
                     if (args.length == 2 || args.length == 4) {
                         configFile = args[args.length - 1];
                     }
@@ -262,20 +265,26 @@ public class IISShortNameScannerTool {
                     if (console != null) {
                         String hasProxy = console.readLine("Do you want to use proxy [Y=Yes, Anything Else=No]? ");
                         if (hasProxy.equalsIgnoreCase("y") || hasProxy.equalsIgnoreCase("yes")) {
-                            String _proxyServerName = console.readLine("Proxy server Name? ");
+                            String _proxyServerName = console.readLine("Proxy server Name? (enter for 127.0.0.1)");
+                            if(_proxyServerName.isBlank()){
+                                _proxyServerName = "127.0.0.1";
+                            }
 
-                            if (!_proxyServerName.equals("")) {
-                                String _proxyServerPort = console.readLine("Proxy server port? ");
-                                if (!_proxyServerPort.equals("") && obj.isInteger(_proxyServerPort)) {
-                                    // We can set the proxy server now
-                                    proxyServerName = _proxyServerName;
-                                    proxyServerPort = Integer.parseInt(_proxyServerPort);
-                                    if (proxyServerPort <= 0 || proxyServerPort > 65535) {
-                                        proxyServerName = "";
-                                        proxyServerPort = 0;
-                                    }
+                            String _proxyServerPort = console.readLine("Proxy server port number? (leave empty to cancel use of a proxy) ");
+                            if (!_proxyServerPort.isBlank() && obj.isInteger(_proxyServerPort)) {
+                                // We can set the proxy server now
+                                proxyServerName = _proxyServerName;
+                                proxyServerPort = Integer.parseInt(_proxyServerPort);
+                                if (proxyServerPort <= 0 || proxyServerPort > 65535) {
+                                    proxyServerName = "";
+                                    proxyServerPort = 0;
                                 }
                             }
+
+                            if(proxyServerPort == 0){
+                                showOutputs("Proxy server has been ignored.");
+                            }
+
                         }
                     }
                 }
@@ -388,6 +397,8 @@ public class IISShortNameScannerTool {
                         } catch (Exception e) {
                             maxConnectionTimeOut = 20000;
                         }
+                        if(maxConnectionTimeOut < 0)
+                            maxConnectionTimeOut = 0;
                     }
                     case "maxretrytimes" -> {
                         try {
@@ -395,6 +406,8 @@ public class IISShortNameScannerTool {
                         } catch (Exception e) {
                             maxRetryTimes = 10;
                         }
+                        if(maxRetryTimes < 0)
+                            maxRetryTimes = 0;
                     }
                     case "proxyservername" -> proxyServerName = properties.getProperty(key, "");
                     case "proxyserverport" -> {
@@ -403,6 +416,8 @@ public class IISShortNameScannerTool {
                         } catch (Exception e) {
                             proxyServerPort = 0;
                         }
+                        if(proxyServerPort < 0 || proxyServerPort > 65535)
+                            proxyServerPort = 0;
                     }
                     case "maxdelayaftereachrequest" -> {
                         try {
@@ -410,6 +425,8 @@ public class IISShortNameScannerTool {
                         } catch (Exception e) {
                             maxDelayAfterEachRequest = (long) 0;
                         }
+                        if(maxDelayAfterEachRequest < 0)
+                            maxDelayAfterEachRequest = (long) 0;
                     }
                     case "magicfinalpartdelimiter" -> magicFinalPartDelimiter = properties.getProperty(key, ",");
                     case "magicfinalpartlist" ->
@@ -423,10 +440,35 @@ public class IISShortNameScannerTool {
                             requestMethodString = properties.getProperty(key, "OPTIONS,GET,POST,HEAD,TRACE,TRACK,DEBUG");
                     case "acceptabledifferencelengthbetweenresponses" -> {
                         try {
-                            acceptableDifferenceLengthBetweenResponses = Integer.parseInt(properties.getProperty(key, "10"));
+                            acceptableDifferenceLengthBetweenResponses = Integer.parseInt(properties.getProperty(key, "5"));
                         } catch (Exception e) {
                             acceptableDifferenceLengthBetweenResponses = -1;
                         }
+
+                        if(acceptableDifferenceLengthBetweenResponses < 0)
+                            acceptableDifferenceLengthBetweenResponses = -1;
+                    }
+                    case "ignoreheaderlevel" -> {
+                        try {
+                            ignoreHeaderLevel = Integer.parseInt(properties.getProperty(key, "2"));
+                        } catch (Exception e) {
+                            ignoreHeaderLevel = 2;
+                        }
+                        if(ignoreHeaderLevel>3)
+                            ignoreHeaderLevel = 3;
+                        else if(ignoreHeaderLevel < 0)
+                            ignoreHeaderLevel = 0;
+                    }
+                    case "ignorebodylevel" -> {
+                        try {
+                            ignoreBodyLevel = Integer.parseInt(properties.getProperty(key, "1"));
+                        } catch (Exception e) {
+                            ignoreBodyLevel = 1;
+                        }
+                        if(ignoreBodyLevel>1)
+                            ignoreBodyLevel = 1;
+                        else if(ignoreBodyLevel < 0)
+                            ignoreBodyLevel = 0;
                     }
                     case "namestartswith" -> {
                         nameStartsWith = properties.getProperty(key, "");
@@ -478,7 +520,14 @@ public class IISShortNameScannerTool {
                 if (Objects.equals(value, "")) value = "Default";
                 configTextResult.append(key).append(": ").append(value).append("\r\n");
             }
+
             showOutputs(configTextResult.toString(), ShowProgressMode.PARTIALRESULT);
+
+            if(acceptableDifferenceLengthBetweenResponses >=0 && ignoreHeaderLevel <= 1 && ignoreBodyLevel == 0){
+                acceptableDifferenceLengthBetweenResponses = -1;
+                showOutputs("acceptableDifferenceLengthBetweenResponses has been set to -1 as header and body are being ignored in comparison", OutputType.DEBUG);
+            }
+
             additionalHeaders = additionalHeadersString.split(additionalHeadersDelimiter);
             magicFinalPartList = magicFinalPartStringList.split(magicFinalPartDelimiter);
             requestMethod = requestMethodString.split(requestMethodDelimiter);
@@ -561,6 +610,7 @@ public class IISShortNameScannerTool {
                     if (onlyCheckForVulnerableSite) {
                         break;
                     } else {
+                        showOutputs("Early result: the target is probably vulnerable.");
                         isQuestionMarkReliable = isQuestionMarkReliable();
                         if (concurrentThreads == 0) {
                             iterateScanFileNameLegacy("");
@@ -1230,11 +1280,11 @@ public class IISShortNameScannerTool {
             // blocklist approach to find even more for difficult and strange cases!
             if (invalidStatusList.contains(statusResponse)) {
                 status = "invalid";
-            } else if (validStatusList.stream().anyMatch(str -> str.substring(0, 50).equals(statusResponse.substring(0, 50)))) {
+            } else if (validStatusList.stream().anyMatch(str -> str.substring(0, Math.min(str.length(), 50)).equals(statusResponse.substring(0, Math.min(statusResponse.length(), 50))))) {
                 status = "valid";
             } else if (counter > 2) {
                 for (var is : invalidStatusList) {
-                    if (is.substring(0, 50).equals(statusResponse.substring(0, 50))) {
+                    if (is.substring(0, Math.min(is.length(), 50)).equals(statusResponse.substring(0, Math.min(statusResponse.length(), 50)))) {
                         status = "invalid";
                         break;
                     }
@@ -1317,8 +1367,9 @@ public class IISShortNameScannerTool {
     }
 
     private boolean isResponseInList(String currentResponse, List<String> sourceList, int responseLengthDifferenceThreshold) {
-        boolean isUnique = true;
+        boolean isUnique = false;
         if (!sourceList.contains(currentResponse)) {
+            isUnique = true;
             if (responseLengthDifferenceThreshold > 0) {
                 for (String sourceItem : sourceList) {
                     if (Math.abs(sourceItem.length() - currentResponse.length()) <= responseLengthDifferenceThreshold) {
@@ -1690,7 +1741,7 @@ public class IISShortNameScannerTool {
     }
 */
 
-    private String processResponse(String finalResponse, String strAddition, String charset) {
+    private String cleanDynamicValuesInResponse(String finalResponse, String strAddition, String charset) {
         if (charset.isBlank())
             charset = "UTF-8";
 
@@ -1713,30 +1764,93 @@ public class IISShortNameScannerTool {
         } catch (Exception e) {
             // handle unsupported exception
         }
-        finalResponse = finalResponse.toLowerCase();
-        finalResponse = finalResponse.replaceAll("(?im)(\\\\)", "/").replaceAll("(?im)&amp;", "&").replaceAll("(?im)([\\(\\)\\.\\*\\?])", "");
+
+        // replacing \ with /
+        finalResponse = finalResponse.replaceAll("(?im)(\\\\)", "/");
+        // replacing &amp; with & just in case HTML decoding has failed
+        finalResponse = finalResponse.replaceAll("(?im)&amp;", "&");
+        // removing the following special characters from the response: ( ) . * ?
+        finalResponse = finalResponse.replaceAll("(?im)([\\(\\)\\.\\*\\?])", "");
+
+        // preparing patterns that can be dynamic based on what was added to the path
         strAddition += "/" + fullUrlEncodedStrAddition; // to remove incoming data + even url encoded format
         strAddition += "/" + additionalQuery;
         strAddition += "/" + partlyUrlEncodedStrAddition;
         strAddition = strAddition.replaceAll("(?im)([\\\\])", "/").replaceAll("(?im)&amp;", "&").replaceAll("(?im)([\\(\\)\\.\\*\\?])", "");
         strAddition = strAddition.toLowerCase();
-        finalResponse = finalResponse.replaceAll("[0-9a-f]{8}-?([0-9a-f]{4}-?){3}[0-9a-f]{12}", "00000000000000000000000000000000");
-        finalResponse = finalResponse.replaceAll("^(x-[^:]+:\\s*)[^\\r\\n]+$", "$1");
+        String[] temp = removeDuplicatesAndBlanks(strAddition.split("/"));
 
-        String[] temp = strAddition.split("/");
+        // removing the generated patterns based on what was added to the path
         for (String s : temp) {
             if (s.length() > 0) {
                 while (finalResponse.indexOf(s) > 0) {
                     finalResponse = finalResponse.replaceAll("(?im)(\\<[^>]+[a-z0-9\\-]=['\"`]([^\"]*" + Pattern.quote(s) + "[^\"]*)['\"`][^>]*>)", ""); // to remove a tag when it includes dynamic contents
-                    finalResponse = finalResponse.replace(s, "");
+                    finalResponse = finalResponse.replaceAll("(?im)" + Pattern.quote(s), "");
                 }
             }
         }
-        finalResponse = finalResponse.replaceAll("(?im)(([\\n\\r\\x00]+)|((server error in).+>)|((physical path).+>)|((requested url).+>)|((handler<).+>)|((notification<).+>)|(\\://[a-zA-Z0-9\\-\\.]+\\.[a-zA-Z]{2,3}(/\\S*)?)|(<!--[\\w\\W]*?-->)|((content-type)[\\s\\:\\=]+[\\w \\d\\=\\[\\,\\:\\-\\/\\;]*)|((length)[\\s\\:\\=]+[\\w \\d\\=\\[\\,\\:\\-\\/\\;]*)|((tag|p3p|expires|date|age|modified|cookie)[\\s\\:\\=]+[^\\r\\n]*)|([\\:\\-\\/\\ ]\\d{1,4})|(: [\\w\\d, :;=/]+\\W)|(^[\\w\\d, :;=/]+\\W$)|(\\d{1,4}[\\:\\-\\/\\ ]\\d{1,4}))", "");
 
+        // The following RegEx was too intrusive and could replace a large part of a required text in the body
+        //finalResponse = finalResponse.replaceAll("(?im)(([\\n\\r\\x00]+)|((server error in).+>)|((physical path).+>)|((requested url).+>)|((handler<).+>)|((notification<).+>)|(\\://[a-zA-Z0-9\\-\\.]+\\.[a-zA-Z]{2,3}(/\\S*)?)|(<!--[\\w\\W]*?-->)|((content-type)[\\s]*[\\:\\=]+[\\s]*[\\w \\d\\=\\[\\,\\:\\-\\/\\;]*)|((length)[\\s]*[\\:\\=]+[\\s]*[\\w \\d\\=\\[\\,\\:\\-\\/\\;]*)|((tag|p3p|expires|date|age|modified|cookie)[\\s]*[\\:\\=]+[\\s]*[^\\r\\n]*)|([\\:\\-\\/\\ ]\\d{1,4})|(: [\\w\\d, :;=/]+\\W)|(^[\\w\\d, :;=/]+\\W$)|(\\d{1,4}[\\:\\-\\/\\ ]\\d{1,4}))", "");
+        // The RegEx above has been broken down to smaller pieces to reduce confusions in the future
+
+        // cleaning the response further
+        // removing some common .NET errors
+        finalResponse = finalResponse.replaceAll("(?im)(((server error in).+>)|((physical path).+>)|((requested url).+>)|((handler<).+>)|((notification<).+>))","");
+        // removing HTML comments
+        finalResponse = finalResponse.replaceAll("(?im)(<!--[\\w\\W]*?-->)","");
+        // removing URLs
+        finalResponse = finalResponse.replaceAll("(\\:[\\/\\\\]+[a-zA-Z0-9\\-\\.]+\\.[a-zA-Z]{2,3}([\\/\\\\]+[a-zA-Z\\/\\\\0-9%_\\-\\?=&\\.]*)?)","");
+
+        //this is the controversial bit which may cause false negatives :s
+
+        if(ignoreHeaderLevel==2) {
+            // ignore value of all headers starting with X-
+            finalResponse = finalResponse.replaceAll("(?im)^(x\\-[^:]+:\\s*)[^\\r\\n]+$", "$1");
+            // removing content-type header and its value
+            finalResponse = finalResponse.replaceAll("(?im)^content\\-type[\\s]*[\\:\\=]+[\\s]*[\\w \\d\\=\\[\\,\\:\\-\\/\\;]*", "");
+            // removing content-length header and its replacements by WAFs
+            finalResponse = finalResponse.replaceAll("(?im)^content\\-l[ength]{4,}[\\s]*[\\:\\=]+[\\s]*[\\w \\d\\=\\[\\,\\:\\-\\/\\;]*", "");
+            // removing more known dynamic headers and their values
+            finalResponse = finalResponse.replaceAll("(?i)(tag|p3p|expires|date|age|modified|cookie|report\\-to)[\\s]*[\\:\\=]+[\\s]*[^\\r\\n]*", "");
+            // removing headers with less complex values
+            finalResponse = finalResponse.replaceAll("(?im)^[\\w\\d\\-]+\\s*:\\s*[\\w\\d, \\t:;=\\/]+$","");
+        }
+
+        // replace d attribute value in the path tag in a SVG as they are very long and annoying!
+        finalResponse = finalResponse.replaceAll("<path[^>]*\\sd=\"([^\"]*)\"","<path");
+        // replace UUIDs
+        finalResponse = finalResponse.replaceAll("\\b(?=[a-fA-F0-9-]{32,})(?:[a-fA-F0-9]{1,8}-?(?:[a-fA-F0-9]{1,4}-?){3}[a-fA-F0-9]{1,12})\\b","00000000000000000000000000000000");
+        // replace hex strings longer than 30 characters
+        finalResponse = finalResponse.replaceAll("\\b(?:[0-9a-fA-F]{2}){15,}\\b","A0000000000000000000000000000F");
+        // replacing base64 characters longer than 30 characters - this can also match a URL path, but we cannot do anything about that
+        finalResponse = finalResponse.replaceAll("(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[=\\/\\-_+\\\\])[a-zA-Z0-9=\\/\\-_+\\\\]{30,}","ABCD");
+        // replacing dates with both the ISO 8601 format (2023-04-28T13:37:00Z) and the RFC 2822 format (Fri, 28 Apr 2023 13:37:00 GMT)
+        finalResponse = finalResponse.replaceAll("(?:\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\dZ)|(?:[A-Za-z]{3},\\s(?:0[1-9]|[12]\\d|3[01])\\s[A-Za-z]{3}\\s\\d{4}\\s(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d\\s[A-Za-z]{3})","0");
+        // replacing surrounded numbers or versions which might be dynamic
+        finalResponse = finalResponse.replaceAll("\\b[\\d]{1,}?[\\d\\.]*\\b","0");
+        // replacing Cr and Lf and Null chars
+        finalResponse = finalResponse.replaceAll("(?im)[\\n\\r\\x00]+"," ");
+        // replacing repetitive spaces
+        finalResponse = finalResponse.replaceAll("(?im)[ \\t]+"," ");
+        // converting the response letters to lowercase
+        finalResponse = finalResponse.toLowerCase();
         return finalResponse;
     }
 
+    private static String[] removeDuplicatesAndBlanks(String[] inputArray) {
+        Set<String> uniqueSet = new HashSet<>();
+        ArrayList<String> uniqueList = new ArrayList<>();
+
+        for (String item : inputArray) {
+            String trimmedItem = item.trim();
+            if (!trimmedItem.isEmpty() && uniqueSet.add(trimmedItem)) {
+                uniqueList.add(trimmedItem);
+            }
+        }
+
+        return uniqueList.toArray(new String[0]);
+    }
     private String convertHttpResponseToString(CloseableHttpResponse httpResponse, String charset) {
         StringJoiner stringJoiner = new StringJoiner("\r\n");
         if (charset.isBlank())
@@ -1898,9 +2012,56 @@ public class IISShortNameScannerTool {
 
                 //showOutputs("finalResponse: " + finalResponse, OutputType.DEBUG);
                 if (!finalResponse.isBlank()) {
+                    String statusCode = String.valueOf(httpResponse.getCode());
+                    String firstLine = "";
+                    try (BufferedReader reader = new BufferedReader(new StringReader(finalResponse))) {
+                        firstLine = reader.readLine();
+                    } catch (Exception e) {
+
+                    }
                     // Clean-up process
-                    finalResponse = processResponse(finalResponse, strAddition, charset);
-                    //showOutputs("finalResponse: " + finalResponse, OutputType.DEBUG);
+                    boolean removeHeader = false;
+                    boolean removeBody = false;
+                    if(ignoreHeaderLevel <= 1){
+                        // we do not need the headers, so we should remove them from the response
+                        removeHeader = true;
+                    }
+                    if(ignoreBodyLevel == 0){
+                        // we do not need the headers, so we should remove them from the response
+                        removeBody = true;
+                    }
+
+                    if(!removeHeader || !removeBody){
+                        if(removeHeader || removeBody){
+                            Pattern pattern = Pattern.compile("\\R\\R"); // this matches either \r\n or \n as a new line
+                            Matcher matcher = pattern.matcher(finalResponse);
+                            String temp_header = finalResponse;
+                            String temp_bodyPart = "";
+                            if (matcher.find()) {
+                                temp_header = finalResponse.substring(0,matcher.end());
+                                temp_bodyPart = finalResponse.substring(matcher.end());
+                            }
+
+                            if(removeHeader){
+                                finalResponse = temp_bodyPart;
+                            }
+                            else if(removeBody){
+                                finalResponse = temp_header;
+                            }
+                        }
+
+                        if(!finalResponse.isBlank())
+                            finalResponse = cleanDynamicValuesInResponse(finalResponse, strAddition, charset);
+
+                        finalResponse = firstLine + "\r\n" + finalResponse;
+                    }else{
+                        if(ignoreHeaderLevel == 0){
+                            finalResponse = statusCode;
+                        }else{
+                            finalResponse = firstLine;
+                        }
+                    }
+                    showOutputs("Cleaned Response to compare:\r\n" + finalResponse, OutputType.DEBUG);
                 }
 
                 Thread.sleep(maxDelayAfterEachRequest); // Delay after each request
