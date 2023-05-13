@@ -82,7 +82,7 @@ public class IISShortNameScannerTool {
     private static int acceptableDifferenceLengthBetweenResponses;
     private static boolean onlyCheckForVulnerableSite = false;
     private static String configFile = "config.xml";
-    private final static String strVersion = "2023.3";
+    private final static String strVersion = "2023.4";
     public Set<String> finalResultsFiles = new TreeSet<>();
     public Set<String> finalResultsDirs = new TreeSet<>();
     private static String[] arrayScanList;
@@ -754,10 +754,10 @@ public class IISShortNameScannerTool {
             }
             localThreadPool.join();
             arrayScanListName = scanListName.toArray(new String[0]);
-            showOutputs("Identified letters in names: " + String.join(",", arrayScanListName), OutputType.DEBUG);
+            showOutputs("Early result: identified letters in names > " + String.join(",", arrayScanListName));
             if (isExtensionReliable) {
                 arrayScanListExt = scanListExtension.toArray(new String[0]);
-                showOutputs("Identified letters in extensions: " + String.join(",", arrayScanListExt), OutputType.DEBUG);
+                showOutputs("Early result: identified letters in extensions > " + String.join(",", arrayScanListExt));
             }
 
         } catch (Exception err) {
@@ -2000,7 +2000,12 @@ public class IISShortNameScannerTool {
             //HttpUriRequestBase httpRequest = new HttpUriRequestBase(httpMethod, finalURL);
             if (!body.isEmpty()) {
                 httpRequest.setEntity(new StringEntity(body));
+            }else if(httpMethod.equals("POST") || httpMethod.equals("PUT") || httpMethod.equals("PATCH")){
+                // this is needed to have "content-length: 0" in the header
+                httpRequest.setEntity(new StringEntity(""));
             }
+
+
 
             try {
                 // Send the request.

@@ -58,7 +58,7 @@
 	<entry key="maxDelayAfterEachRequest">1</entry>
 	
 	<entry key="magicFinalPartDelimiter">,</entry>
-	<entry key="magicFinalPartList"><![CDATA[/~1/,/~1/.rem,\a.aspx,\a.asp,/a.aspx,/a.asp,/a.shtml,/a.asmx,/a.ashx,/a.config,/a.php,/a.jpg,/webresource.axd,/a.xxx]]></entry>
+	<entry key="magicFinalPartList"><![CDATA[/~1/.rem,/~1/,\a.aspx,\a.asp,/a.aspx,/a.asp,/a.shtml,/a.asmx,/a.ashx,/a.config,/a.php,/a.jpg,/webresource.axd,/a.xxx]]></entry>
 	
 	<!-- in Windows we can sometimes use > instead of ? -->
 	<entry key="questionMarkSymbol"><![CDATA[?]]></entry>
@@ -73,7 +73,7 @@
 	<entry key="magicFileExtension"><![CDATA[*]]></entry>
 
 	<entry key="requestMethodDelimiter">,</entry>
-	<entry key="requestMethod"><![CDATA[OPTIONS,DEBUG,TRACE,GET,POST,HEAD]]></entry>
+	<entry key="requestMethod"><![CDATA[OPTIONS,POST,DEBUG,TRACE,GET,HEAD]]></entry>
 	
 	<!-- This will be used to find file or directory names that start with this string - should be less than 6 characters  -->
 	<entry key="nameStartsWith"><![CDATA[]]></entry>
