@@ -6,3 +6,5 @@ gradle-app.setting
 .gradletasknamecache
 .git
 .idea/
+/release/config-test.xml
+/release/20*.jar
