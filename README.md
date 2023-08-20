@@ -1,13 +1,17 @@
 IIS Short Name Scanner - 2012-2023 & Still Giving...
 =====================
 
-Latest presentation: [Beyond Microsoft IIS Short File Name Disclosure](/presentation/Steelcon-2023-Beyond_Microsoft_IIS_Short_File_Name_Disclosure.pdf)
+Latest presentation: 
+* [Beyond Microsoft IIS Short File Name Disclosure](/presentation/Steelcon-2023-Beyond_Microsoft_IIS_Short_File_Name_Disclosure.pdf)
+
+Latest blog post:
+* https://soroush.me/blog/2023/07/thirteen-years-on-advancing-the-understanding-of-iis-short-file-name-sfn-disclosure/
+
+I recommended everyone to try @bitquark's new tool in Go before trying this old tool: https://github.com/bitquark/shortscan
 
 The latest version of scanner for IIS short file name (8.3) disclosure vulnerability by using the tilde (~) character. This issue has been discovered in 2010 but has been evolved a few times since.
 
 This is an old tool and the code is a spaghetti, but it is capable to tackle even the latest IIS (IIS 10 on Windows Server 2022 at the time of writing this)! It has recently been updated, so it can support sending custom HTTP methods without reflection hacks in Java. However, some awesome researchers have tried to reimplement this tool using other technologies such as in Go, and when they become mature, they probably work better than this.
-
-For instance, I recommended everyone to try @bitquark's new tool in Go before trying this old tool (if you really have to): https://github.com/bitquark/shortscan
 
 Description
 -------------
@@ -172,18 +176,22 @@ overwrite config file:
 References
 ------------
 
-One of the new methods: https://soroush.secproject.com/blog/2014/08/iis-short-file-name-disclosure-is-back-is-your-server-vulnerable/
+Research links:
+* https://soroush.me/blog/2023/07/thirteen-years-on-advancing-the-understanding-of-iis-short-file-name-sfn-disclosure/
+* https://soroush.secproject.com/blog/2014/08/iis-short-file-name-disclosure-is-back-is-your-server-vulnerable/ 
+* http://soroush.secproject.com/downloadable/microsoft_iis_tilde_character_vulnerability_feature.pdf (old original research)
 
-Original research file: http://soroush.secproject.com/downloadable/microsoft_iis_tilde_character_vulnerability_feature.pdf
+Website Reference: 
+* http://soroush.secproject.com/blog/2012/06/microsoft-iis-tilde-character-vulnerabilityfeature-short-filefolder-name-disclosure/
 
-Website Reference: http://soroush.secproject.com/blog/2012/06/microsoft-iis-tilde-character-vulnerabilityfeature-short-filefolder-name-disclosure/
+Video Links: 
+* https://www.youtube.com/watch?v=KbZ-y7b7yDs at SteelCon 2023
+* https://www.youtube.com/watch?v=HrJW6Y9kHC4 by shubs (@infosec_au)
+* http://www.youtube.com/watch?v=XOd90yCXOP4
 
-Video Link: http://www.youtube.com/watch?v=XOd90yCXOP4
-
-http://www.osvdb.org/83771
-
-http://www.exploit-db.com/exploits/19525/
-
-http://securitytracker.com/id?1027223
+Other links:
+* http://www.osvdb.org/83771
+* http://www.exploit-db.com/exploits/19525/
+* http://securitytracker.com/id?1027223
 
 
